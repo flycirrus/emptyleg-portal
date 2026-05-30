@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  role          Role      @default(PENDING)
+  googleId      String?   @unique
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  inquiryNotes  Inquiry[] @relation("AdminNotes")
+}
+
+enum Role {
+  PENDING
+  BASIC
+  BROKER
+  MANAGER
+  ADMIN
+}
+
+model Flight {
+  id              String    @id @default(cuid())
+  leonFlightId    String    @unique
+  flightNo        String
+  depDatetimeUtc  DateTime
+  aircraftType    String
+  depAirportIata  String
+  depAirportIcao  String
+  depCity         String
+  depCountry      String
+  arrAirportIata  String
+  arrAirportIcao  String
+  arrCity         String
+  arrCountry      String
+  distanceNm      Int
+  paxCapacity     Int
+  calculatedPrice Int
+  isVisible       Boolean   @default(true)
+  adminNotes      String?
+  syncedAt        DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  inquiries       Inquiry[]
+}
+
+model Inquiry {
+  id            String        @id @default(cuid())
+  flight        Flight        @relation(fields: [flightId], references: [id])
+  flightId      String
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  message       String
+  status        InquiryStatus @default(NEW)
+  adminNotes    String?
+  handledBy     User?         @relation("AdminNotes", fields: [handledById], references: [id])
+  handledById   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  REPLIED
+  CLOSED
+}
+
+model PricingConfig {
+  id                     String   @id @default(cuid())
+  shortFlightThresholdNm Int      @default(400)
+  shortFlightMultiplier  Float    @default(18.9)
+  longFlightMultiplier   Float    @default(8.5)
+  minimumPrice           Int      @default(1700)
+  roundToNearest         Int      @default(100)
+  updatedAt              DateTime @updatedAt
+}
+
+model CountrySurcharge {
+  id          String   @id @default(cuid())
+  countryCode String
+  countryName String
+  surchargeType SurchargeType @default(FIXED)
+  amount      Float
+  label       String
+  isActive    Boolean  @default(true)
+  appliesTo   AppliesTo @default(BOTH)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([countryCode, label])
+}
+
+enum SurchargeType {
+  FIXED
+  PERCENTAGE
+}
+
+enum AppliesTo {
+  DEPARTURE
+  ARRIVAL
+  BOTH
+}
+
+model SyncLog {
+  id            String     @id @default(cuid())
+  status        SyncStatus
+  flightsSynced Int        @default(0)
+  errorMessage  String?
+  startedAt     DateTime   @default(now())
+  completedAt   DateTime?
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model ApiConfig {
+  id                String   @id @default(cuid())
+  leonRefreshToken  String
+  syncIntervalMin   Int      @default(15)
+  notificationEmail String   @default("fly@hypejets.com")
+  updatedAt         DateTime @updatedAt
+}

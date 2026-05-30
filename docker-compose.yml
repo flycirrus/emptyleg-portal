@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: emptyleg
+      POSTGRES_USER: emptyleg
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      DATABASE_URL: postgresql://emptyleg:${DB_PASSWORD:-changeme}@db:5432/emptyleg
+      NEXTAUTH_URL: https://emptylegs.hypejets.com
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      LEON_API_URL: ${LEON_API_URL:-https://HYP.leon.aero}
+      LEON_REFRESH_TOKEN: ${LEON_REFRESH_TOKEN}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      NOTIFICATION_EMAIL: ${NOTIFICATION_EMAIL:-fly@hypejets.com}
+      CRON_SECRET: ${CRON_SECRET}
+    depends_on:
+      - db
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_data:/var/www/certbot:ro
+      - letsencrypt_data:/etc/letsencrypt:ro
+    depends_on:
+      - app
+
+  # Auto-sync every 15 minutes
+  cron:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command: >
+      -c "while true; do
+        sleep 900;
+        curl -s -X POST http://app:3000/api/cron/sync -H 'Authorization: Bearer $${CRON_SECRET}';
+        echo ' [sync done]';
+      done"
+    environment:
+      CRON_SECRET: ${CRON_SECRET}
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  certbot_data:
+  letsencrypt_data:
