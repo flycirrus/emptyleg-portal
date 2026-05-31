@@ -38,7 +38,7 @@ async function main() {
 
   // Default country surcharges
   await prisma.countrySurcharge.upsert({
-    where: { countryCode_label: { countryCode: "IT", label: "Italian Luxury Tax" } },
+    where: { countryCode_label_appliesTo: { countryCode: "IT", label: "Italian Luxury Tax", appliesTo: "BOTH" } },
     update: {},
     create: {
       countryCode: "IT",
@@ -52,7 +52,7 @@ async function main() {
   });
 
   await prisma.countrySurcharge.upsert({
-    where: { countryCode_label: { countryCode: "FR", label: "French Aviation Tax" } },
+    where: { countryCode_label_appliesTo: { countryCode: "FR", label: "French Aviation Tax", appliesTo: "BOTH" } },
     update: {},
     create: {
       countryCode: "FR",
