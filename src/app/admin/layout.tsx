@@ -15,6 +15,7 @@ import {
   LogOut,
   ChevronLeft,
 } from 'lucide-react';
+import SignOutButton from '@/components/SignOutButton';
 
 const navItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -132,13 +133,10 @@ export default function AdminLayout({
               </div>
               <span className="text-sm text-muted">Admin</span>
             </div>
-            <Link
-              href="/api/auth/signout"
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-light hover:text-white"
-            >
+            <SignOutButton className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-light hover:text-white">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign Out</span>
-            </Link>
+            </SignOutButton>
           </div>
         </header>
 

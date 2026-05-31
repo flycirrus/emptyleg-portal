@@ -10,6 +10,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
 export async function sendInquiryNotification(inquiry: {
   customerName: string;
   customerEmail: string;
@@ -47,7 +49,7 @@ export async function sendApprovalNotification(userEmail: string, userName: stri
     html: `
       <h2>Welcome, ${userName}!</h2>
       <p>Your HYPE Empty Legs account has been approved. You can now log in and view available flights.</p>
-      <p><a href="${process.env.NEXTAUTH_URL}/login">Log in now</a></p>
+      <p><a href="${baseUrl}/login">Log in now</a></p>
     `,
   });
 }
@@ -65,7 +67,7 @@ export async function sendNewUserNotification(userName: string, userEmail: strin
       <p><strong>Name:</strong> ${userName}</p>
       <p><strong>Email:</strong> ${userEmail}</p>
       <p>Please review and approve this account in the admin dashboard.</p>
-      <p><a href="${process.env.NEXTAUTH_URL}/admin/users">Go to User Management</a></p>
+      <p><a href="${baseUrl}/admin/users">Go to User Management</a></p>
     `,
   });
 }

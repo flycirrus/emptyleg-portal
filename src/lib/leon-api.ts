@@ -123,8 +123,13 @@ export async function syncFlights(): Promise<{
 
     let synced = 0;
     for (const flight of flights) {
-      const price = calculatePrice(
+      const start = new Date(flight.startTimeUTC).getTime();
+      const end = new Date(flight.endTimeUTC).getTime();
+      const durationMin = Math.round((end - start) / 60000);
+
+      const { basePrice, taxPerPax } = calculatePrice(
         flight.dist,
+        durationMin,
         pricingConfig,
         flight.startAirport.country,
         flight.endAirport.country,
@@ -146,8 +151,10 @@ export async function syncFlights(): Promise<{
           arrCity: flight.endAirport.city,
           arrCountry: flight.endAirport.country,
           distanceNm: flight.dist,
+          durationMin,
           paxCapacity: flight.acft.paxCapacity,
-          calculatedPrice: price,
+          calculatedPrice: basePrice,
+          estimatedTaxPerPax: taxPerPax,
           syncedAt: new Date(),
         },
         create: {
@@ -164,8 +171,10 @@ export async function syncFlights(): Promise<{
           arrCity: flight.endAirport.city,
           arrCountry: flight.endAirport.country,
           distanceNm: flight.dist,
+          durationMin,
           paxCapacity: flight.acft.paxCapacity,
-          calculatedPrice: price,
+          calculatedPrice: basePrice,
+          estimatedTaxPerPax: taxPerPax,
           syncedAt: new Date(),
         },
       });

@@ -1,10 +1,13 @@
 import { prisma } from "./prisma";
 
 export interface PricingConfig {
+  pricingMode: "DISTANCE" | "TIME";
+  flightHourPrice: number;
   shortFlightThresholdNm: number;
   shortFlightMultiplier: number;
   longFlightMultiplier: number;
   minimumPrice: number;
+  maximumPrice?: number | null;
   roundToNearest: number;
 }
 
@@ -18,26 +21,43 @@ export interface Surcharge {
 }
 
 const DEFAULT_CONFIG: PricingConfig = {
+  pricingMode: "DISTANCE",
+  flightHourPrice: 3000,
   shortFlightThresholdNm: 400,
   shortFlightMultiplier: 18.9,
   longFlightMultiplier: 8.5,
   minimumPrice: 1700,
+  maximumPrice: null,
   roundToNearest: 100,
 };
 
 export function calculateBasePrice(
   distanceNm: number,
+  durationMin: number | null | undefined,
   config: PricingConfig
 ): number {
-  const multiplier =
-    distanceNm < config.shortFlightThresholdNm
-      ? config.shortFlightMultiplier
-      : config.longFlightMultiplier;
+  let raw = 0;
 
-  const raw = distanceNm * multiplier;
+  if (config.pricingMode === "TIME" && durationMin != null) {
+    // Pricing based on flight hours
+    const flightHours = durationMin / 60;
+    raw = flightHours * config.flightHourPrice;
+  } else {
+    // Pricing based on distance
+    const multiplier =
+      distanceNm < config.shortFlightThresholdNm
+        ? config.shortFlightMultiplier
+        : config.longFlightMultiplier;
+    raw = distanceNm * multiplier;
+  }
+
   const rounded =
     Math.round(raw / config.roundToNearest) * config.roundToNearest;
-  return Math.max(rounded, config.minimumPrice);
+  let finalPrice = Math.max(rounded, config.minimumPrice);
+  if (config.maximumPrice != null) {
+    finalPrice = Math.min(finalPrice, config.maximumPrice);
+  }
+  return finalPrice;
 }
 
 export function calculateSurcharges(
@@ -72,12 +92,14 @@ export function calculateSurcharges(
 
 export function calculatePrice(
   distanceNm: number,
+  durationMin: number | null | undefined,
   config: PricingConfig,
   depCountry?: string,
   arrCountry?: string,
   surcharges?: Surcharge[]
-): number {
-  const basePrice = calculateBasePrice(distanceNm, config);
+): { basePrice: number; taxPerPax: number } {
+  const basePrice = calculateBasePrice(distanceNm, durationMin, config);
+  let taxPerPax = 0;
 
   if (depCountry && arrCountry && surcharges?.length) {
     const { total } = calculateSurcharges(
@@ -86,20 +108,23 @@ export function calculatePrice(
       arrCountry,
       surcharges
     );
-    return basePrice + total;
+    taxPerPax = total;
   }
 
-  return basePrice;
+  return { basePrice, taxPerPax };
 }
 
 export async function getPricingConfig(): Promise<PricingConfig> {
   const config = await prisma.pricingConfig.findFirst();
   if (!config) return DEFAULT_CONFIG;
   return {
+    pricingMode: config.pricingMode as "DISTANCE" | "TIME",
+    flightHourPrice: config.flightHourPrice,
     shortFlightThresholdNm: config.shortFlightThresholdNm,
     shortFlightMultiplier: config.shortFlightMultiplier,
     longFlightMultiplier: config.longFlightMultiplier,
     minimumPrice: config.minimumPrice,
+    maximumPrice: config.maximumPrice,
     roundToNearest: config.roundToNearest,
   };
 }

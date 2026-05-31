@@ -28,7 +28,7 @@ const createSchema = z.object({
   surchargeType: z.enum(["FIXED", "PERCENTAGE"]),
   amount: z.number().min(0),
   label: z.string().min(1),
-  appliesTo: z.enum(["DEPARTURE", "ARRIVAL", "BOTH"]),
+  appliesTo: z.enum(["DEPARTURE", "ARRIVAL"]),
   isActive: z.boolean().default(true),
 });
 
@@ -58,7 +58,7 @@ const updateSchema = z.object({
   surchargeType: z.enum(["FIXED", "PERCENTAGE"]).optional(),
   amount: z.number().min(0).optional(),
   label: z.string().min(1).optional(),
-  appliesTo: z.enum(["DEPARTURE", "ARRIVAL", "BOTH"]).optional(),
+  appliesTo: z.enum(["DEPARTURE", "ARRIVAL"]).optional(),
   isActive: z.boolean().optional(),
 });
 

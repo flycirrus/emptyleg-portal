@@ -30,10 +30,13 @@ interface SurchargeData {
 
 export default function PricingPage() {
   const [config, setConfig] = useState<PricingConfigData>({
+    pricingMode: 'DISTANCE',
+    flightHourPrice: 3000,
     shortFlightThresholdNm: 400,
     shortFlightMultiplier: 18.9,
     longFlightMultiplier: 8.5,
     minimumPrice: 1700,
+    maximumPrice: null,
     roundToNearest: 100,
   });
   const [originalConfig, setOriginalConfig] = useState<PricingConfigData | null>(null);
@@ -51,7 +54,7 @@ export default function PricingPage() {
     surchargeType: 'FIXED',
     amount: 0,
     label: '',
-    appliesTo: 'BOTH',
+    appliesTo: 'DEPARTURE',
     isActive: true,
   });
   const [surchargeLoading, setSurchargeLoading] = useState(false);
@@ -68,10 +71,13 @@ export default function PricingPage() {
       const pricingData = await pricingRes.json();
       if (pricingData.config) {
         const c: PricingConfigData = {
+          pricingMode: pricingData.config.pricingMode || 'DISTANCE',
+          flightHourPrice: pricingData.config.flightHourPrice || 3000,
           shortFlightThresholdNm: pricingData.config.shortFlightThresholdNm,
           shortFlightMultiplier: pricingData.config.shortFlightMultiplier,
           longFlightMultiplier: pricingData.config.longFlightMultiplier,
           minimumPrice: pricingData.config.minimumPrice,
+          maximumPrice: pricingData.config.maximumPrice,
           roundToNearest: pricingData.config.roundToNearest,
         };
         setConfig(c);
@@ -109,7 +115,7 @@ export default function PricingPage() {
         surchargeType: 'FIXED',
         amount: 0,
         label: '',
-        appliesTo: 'BOTH',
+        appliesTo: 'DEPARTURE',
         isActive: true,
       });
       setShowAddSurcharge(false);
@@ -181,15 +187,23 @@ export default function PricingPage() {
     }
   };
 
-  const calculatePrice = (distanceNm: number): number => {
-    const multiplier =
-      distanceNm <= config.shortFlightThresholdNm
-        ? config.shortFlightMultiplier
-        : config.longFlightMultiplier;
-    const raw = distanceNm * multiplier;
-    const rounded =
-      Math.ceil(raw / config.roundToNearest) * config.roundToNearest;
-    return Math.max(rounded, config.minimumPrice);
+  const calculatePriceExample = (val: number): number => {
+    let raw = 0;
+    if (config.pricingMode === 'TIME') {
+      raw = (val / 60) * config.flightHourPrice;
+    } else {
+      const multiplier =
+        val <= config.shortFlightThresholdNm
+          ? config.shortFlightMultiplier
+          : config.longFlightMultiplier;
+      raw = val * multiplier;
+    }
+    const rounded = Math.ceil(raw / config.roundToNearest) * config.roundToNearest;
+    let finalPrice = Math.max(rounded, config.minimumPrice);
+    if (config.maximumPrice != null && config.maximumPrice > 0) {
+      finalPrice = Math.min(finalPrice, config.maximumPrice);
+    }
+    return finalPrice;
   };
 
   const hasChanges =
@@ -233,7 +247,63 @@ export default function PricingPage() {
         <div className="rounded-xl border border-border bg-surface p-6">
           <h3 className="mb-6 font-semibold text-white">Parameters</h3>
           <div className="space-y-5">
-            {/* Short flight threshold */}
+            {/* Pricing Mode Selection */}
+            <div>
+              <label className="mb-3 block text-sm font-medium text-muted">
+                Pricing Mode
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    value="DISTANCE"
+                    checked={config.pricingMode === 'DISTANCE'}
+                    onChange={() => setConfig((c) => ({ ...c, pricingMode: 'DISTANCE' }))}
+                    className="text-gold focus:ring-gold"
+                  />
+                  <span className="text-sm text-white">Based on Distance</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="pricingMode"
+                    value="TIME"
+                    checked={config.pricingMode === 'TIME'}
+                    onChange={() => setConfig((c) => ({ ...c, pricingMode: 'TIME' }))}
+                    className="text-gold focus:ring-gold"
+                  />
+                  <span className="text-sm text-white">Based on Time</span>
+                </label>
+              </div>
+            </div>
+
+            {config.pricingMode === 'TIME' ? (
+              <div className="space-y-5 rounded-lg border border-gold/20 bg-gold/5 p-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-muted">
+                    Pricing per Flight Hour (EUR)
+                  </label>
+                  <input
+                    type="number"
+                    value={config.flightHourPrice}
+                    onChange={(e) =>
+                      setConfig((c) => ({
+                        ...c,
+                        flightHourPrice: Number(e.target.value),
+                      }))
+                    }
+                    min={0}
+                    className="input-dark w-full rounded-lg px-4 py-2.5 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Total price = (Flight duration in minutes / 60) × Hourly Price
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-5 rounded-lg border border-border p-4">
+                {/* Short flight threshold */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-muted">
                 Short Flight Threshold (nm)
@@ -295,7 +365,12 @@ export default function PricingPage() {
               />
             </div>
 
-            {/* Minimum price */}
+              </div>
+            )}
+
+            {/* Common parameters (always shown) */}
+            <div className="space-y-5 pt-2">
+              {/* Minimum price */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-muted">
                 Minimum Price (EUR)
@@ -310,6 +385,26 @@ export default function PricingPage() {
                   }))
                 }
                 min={0}
+                className="input-dark w-full rounded-lg px-4 py-2.5 text-sm"
+              />
+            </div>
+
+            {/* Maximum price */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-muted">
+                Maximum Price (EUR) <span className="text-xs font-normal italic">(optional)</span>
+              </label>
+              <input
+                type="number"
+                value={config.maximumPrice || ''}
+                onChange={(e) =>
+                  setConfig((c) => ({
+                    ...c,
+                    maximumPrice: e.target.value ? Number(e.target.value) : null,
+                  }))
+                }
+                min={0}
+                placeholder="No maximum"
                 className="input-dark w-full rounded-lg px-4 py-2.5 text-sm"
               />
             </div>
@@ -361,6 +456,7 @@ export default function PricingPage() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Preview */}
@@ -371,20 +467,19 @@ export default function PricingPage() {
           </div>
           <p className="mb-4 text-xs text-muted">
             Preview how prices are calculated with the current parameters.
-            Threshold: {config.shortFlightThresholdNm} nm
           </p>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted">
-                    Distance
+                    {config.pricingMode === 'TIME' ? 'Duration' : 'Distance'}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted">
-                    Type
+                    {config.pricingMode === 'TIME' ? 'Hours' : 'Type'}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted">
-                    Multiplier
+                    {config.pricingMode === 'TIME' ? 'Rate/hr' : 'Multiplier'}
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted">
                     Raw
@@ -395,48 +490,76 @@ export default function PricingPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {EXAMPLE_DISTANCES.map((dist) => {
-                  const isShort = dist <= config.shortFlightThresholdNm;
-                  const mult = isShort
-                    ? config.shortFlightMultiplier
-                    : config.longFlightMultiplier;
-                  const raw = dist * mult;
-                  const price = calculatePrice(dist);
-                  return (
-                    <tr key={dist} className="hover:bg-surface-light">
-                      <td className="px-3 py-2.5 text-sm text-white">
-                        {dist} nm
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            isShort
-                              ? 'bg-blue-500/20 text-blue-400'
-                              : 'bg-purple-500/20 text-purple-400'
-                          }`}
-                        >
-                          {isShort ? 'Short' : 'Long'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-muted">
-                        x{mult}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm text-muted">
-                        {formatPrice(Math.round(raw))}
-                      </td>
-                      <td className="px-3 py-2.5 text-sm font-medium text-gold">
-                        {formatPrice(price)}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {config.pricingMode === 'TIME' ? (
+                  [60, 90, 120, 150, 180, 240].map((mins) => {
+                    const hours = mins / 60;
+                    const raw = hours * config.flightHourPrice;
+                    const price = calculatePriceExample(mins);
+                    return (
+                      <tr key={mins} className="hover:bg-surface-light">
+                        <td className="px-3 py-2.5 text-sm text-white">
+                          {Math.floor(mins / 60)}h {mins % 60}m
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-muted">
+                          {hours.toFixed(2)}h
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-muted">
+                          {formatPrice(config.flightHourPrice)}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-muted">
+                          {formatPrice(Math.round(raw))}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm font-medium text-gold">
+                          {formatPrice(price)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  EXAMPLE_DISTANCES.map((dist) => {
+                    const isShort = dist <= config.shortFlightThresholdNm;
+                    const mult = isShort
+                      ? config.shortFlightMultiplier
+                      : config.longFlightMultiplier;
+                    const raw = dist * mult;
+                    const price = calculatePriceExample(dist);
+                    return (
+                      <tr key={dist} className="hover:bg-surface-light">
+                        <td className="px-3 py-2.5 text-sm text-white">
+                          {dist} nm
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              isShort
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'bg-purple-500/20 text-purple-400'
+                            }`}
+                          >
+                            {isShort ? 'Short' : 'Long'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-muted">
+                          x{mult}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm text-muted">
+                          {formatPrice(Math.round(raw))}
+                        </td>
+                        <td className="px-3 py-2.5 text-sm font-medium text-gold">
+                          {formatPrice(price)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
           <p className="mt-4 text-xs text-muted">
-            Formula: distance x multiplier, rounded up to nearest{' '}
-            {formatPrice(config.roundToNearest)}, minimum{' '}
-            {formatPrice(config.minimumPrice)}
+            {config.pricingMode === 'TIME' 
+              ? `Formula: (duration in hours) x hourly rate, rounded up to nearest ${formatPrice(config.roundToNearest)}, minimum ${formatPrice(config.minimumPrice)}`
+              : `Formula: distance x multiplier, rounded up to nearest ${formatPrice(config.roundToNearest)}, minimum ${formatPrice(config.minimumPrice)}`
+            }
           </p>
         </div>
       </div>
@@ -525,10 +648,9 @@ export default function PricingPage() {
                 <label className="mb-1 block text-xs text-muted">Applies to</label>
                 <select
                   value={newSurcharge.appliesTo}
-                  onChange={(e) => setNewSurcharge(s => ({ ...s, appliesTo: e.target.value as 'DEPARTURE' | 'ARRIVAL' | 'BOTH' }))}
+                  onChange={(e) => setNewSurcharge(s => ({ ...s, appliesTo: e.target.value as 'DEPARTURE' | 'ARRIVAL' }))}
                   className="input-dark w-full rounded-lg px-3 py-2 text-sm"
                 >
-                  <option value="BOTH">Departure &amp; Arrival</option>
                   <option value="DEPARTURE">Departure only</option>
                   <option value="ARRIVAL">Arrival only</option>
                 </select>
@@ -593,7 +715,7 @@ export default function PricingPage() {
                       {s.surchargeType === 'FIXED' ? formatPrice(s.amount) : `${s.amount}%`}
                     </td>
                     <td className="px-3 py-3 text-sm text-muted">
-                      {s.appliesTo === 'BOTH' ? 'Dep & Arr' : s.appliesTo === 'DEPARTURE' ? 'Departure' : 'Arrival'}
+                      {s.appliesTo === 'DEPARTURE' ? 'Departure' : 'Arrival'}
                     </td>
                     <td className="px-3 py-3">
                       <button

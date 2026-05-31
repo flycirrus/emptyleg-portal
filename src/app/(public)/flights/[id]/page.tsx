@@ -15,8 +15,16 @@ import {
   Loader2,
   Ruler,
 } from "lucide-react";
-import { formatPrice, formatDate, formatTime } from "@/lib/utils";
+import { formatPrice, formatDate } from "@/lib/utils";
 import type { FlightPublic } from "@/types";
+
+function formatUtcTime(utcDateStr: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC"
+  }).format(new Date(utcDateStr));
+}
 
 interface FlightDetailResponse {
   flights: FlightPublic[];
@@ -226,7 +234,7 @@ export default function FlightDetailPage({
           <DetailCell
             icon={<Clock className="h-4 w-4" />}
             label="Departure (UTC)"
-            value={formatTime(flight.depDatetimeUtc)}
+            value={formatUtcTime(flight.depDatetimeUtc)}
           />
           <DetailCell
             icon={<Plane className="h-4 w-4" />}
@@ -253,9 +261,16 @@ export default function FlightDetailPage({
               <span className="text-sm text-gray-400">
                 Estimated charter price
               </span>
-              <span className="text-3xl font-bold text-[#d4af37]">
-                {formatPrice(flight.calculatedPrice)}
-              </span>
+              <div className="flex flex-col items-end">
+                <span className="text-3xl font-bold text-[#d4af37]">
+                  {formatPrice(flight.calculatedPrice)}
+                </span>
+                {flight.estimatedTaxPerPax && flight.estimatedTaxPerPax > 0 ? (
+                  <span className="text-sm text-gray-400 mt-1">
+                    + {formatPrice(flight.estimatedTaxPerPax)} Luxury Tax / pax
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
         )}

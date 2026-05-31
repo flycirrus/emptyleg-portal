@@ -13,28 +13,26 @@ export default async function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-8 py-6 border-b border-border/30">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold tracking-tight text-gold">
+        <Link href="/" className="flex items-center gap-2.5">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6 text-gold"
+          >
+            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 3.2-3.8 3.8-2.6-.9c-.3-.1-.7 0-.9.3L1 15l4 2 2 4c.3-.2.4-.6.3-.9l-.9-2.6 3.8-3.8 3.2 6c.4-.2.7-.6.6-1.1z" />
+          </svg>
+          <span className="text-2xl font-black italic tracking-tighter text-gold">
             HYPE
           </span>
-          <span className="text-sm font-light tracking-widest text-muted uppercase">
+          <span className="text-sm font-medium tracking-[0.2em] text-white uppercase mt-1">
             Private Jets
           </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="btn-gold-outline px-6 py-2 rounded-lg text-sm"
-          >
-            Login
-          </Link>
-          <Link
-            href="/signup"
-            className="btn-gold px-6 py-2 rounded-lg text-sm"
-          >
-            Sign Up
-          </Link>
-        </div>
+        </Link>
       </nav>
 
       {/* Hero Section */}
@@ -49,22 +47,15 @@ export default async function Home() {
             <span className="text-gold">Empty Leg</span> Flights
           </h1>
           <p className="max-w-xl mx-auto text-lg text-muted leading-relaxed">
-            Access premium private jet travel at a fraction of the cost.
-            One-way repositioning flights available on the world&apos;s finest
-            aircraft.
+            Experience the ultimate in luxury aviation. Access premium private
+            jet travel worldwide at a fraction of the cost.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link
-              href="/signup"
-              className="btn-gold px-10 py-3.5 rounded-lg text-base w-full sm:w-auto"
-            >
-              Get Started
-            </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
             <Link
               href="/login"
-              className="btn-gold-outline px-10 py-3.5 rounded-lg text-base w-full sm:w-auto"
+              className="btn-gold px-12 py-4 rounded-lg text-lg w-full sm:min-w-[240px] font-semibold tracking-wide"
             >
-              View Flights
+              Login
             </Link>
           </div>
         </div>
@@ -110,7 +101,7 @@ export default async function Home() {
             </div>
             <h3 className="font-semibold">Verified Operators</h3>
             <p className="text-sm text-muted">
-              Every flight operated by certified, vetted charter companies
+              Every flight operator is vetted by HYPE Private Jets
             </p>
           </div>
           <div className="text-center space-y-3">

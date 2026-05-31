@@ -12,6 +12,7 @@ import {
   X,
   Check,
   MessageSquare,
+  Info,
 } from 'lucide-react';
 import { formatPrice, formatDate, formatTime } from '@/lib/utils';
 
@@ -45,6 +46,26 @@ export default function FlightsPage() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  const [selectedFlightPrice, setSelectedFlightPrice] = useState<string | null>(null);
+  const [priceBreakdownData, setPriceBreakdownData] = useState<any | null>(null);
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false);
+
+  const fetchPriceBreakdown = async (flightId: string) => {
+    setSelectedFlightPrice(flightId);
+    setLoadingBreakdown(true);
+    setPriceBreakdownData(null);
+    try {
+      const res = await fetch(`/api/admin/flights/${flightId}/price-breakdown`);
+      if (!res.ok) throw new Error('Failed to load breakdown');
+      const data = await res.json();
+      setPriceBreakdownData(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingBreakdown(false);
+    }
+  };
 
   const fetchFlights = async () => {
     try {
@@ -320,9 +341,13 @@ export default function FlightsPage() {
                     {flight.paxCapacity}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm font-medium text-gold">
+                    <button
+                      onClick={() => fetchPriceBreakdown(flight.id)}
+                      className="group flex items-center gap-1.5 text-sm font-medium text-gold transition-colors hover:text-[#e5c587]"
+                    >
                       {formatPrice(flight.calculatedPrice)}
-                    </span>
+                      <Info className="h-3.5 w-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
@@ -415,6 +440,77 @@ export default function FlightsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Price Breakdown Modal */}
+      {selectedFlightPrice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white">Price Breakdown</h3>
+              <button
+                onClick={() => setSelectedFlightPrice(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {loadingBreakdown ? (
+              <div className="flex h-32 items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-[#c9a96e]" />
+              </div>
+            ) : priceBreakdownData ? (
+              <div className="space-y-4 text-sm">
+                <div className="rounded-lg bg-gray-800/50 p-4">
+                  <p className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Base Price</p>
+                  {priceBreakdownData.basePriceCalculation.mode === 'TIME' ? (
+                    <div className="flex justify-between text-gray-300">
+                      <span>{priceBreakdownData.basePriceCalculation.flightHours.toFixed(2)} hrs &times; {formatPrice(priceBreakdownData.basePriceCalculation.flightHourPrice)}/hr</span>
+                      <span>{formatPrice(priceBreakdownData.basePriceCalculation.rawBasePrice)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-gray-300">
+                      <span>{priceBreakdownData.basePriceCalculation.distanceNm} nm &times; {priceBreakdownData.basePriceCalculation.multiplierUsed}€/nm</span>
+                      <span>{formatPrice(priceBreakdownData.basePriceCalculation.rawBasePrice)}</span>
+                    </div>
+                  )}
+                  {priceBreakdownData.minimumPriceApplied && (
+                    <div className="mt-2 text-xs text-[#c9a96e]">
+                      * Adjusted to minimum price: {formatPrice(priceBreakdownData.configUsed.minimumPrice)}
+                    </div>
+                  )}
+                  <div className="mt-2 border-t border-gray-700 pt-2 flex justify-between font-semibold text-white">
+                    <span>Rounded Base Price</span>
+                    <span>{formatPrice(priceBreakdownData.roundedBasePrice)}</span>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-gray-800/50 p-4">
+                  <p className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Luxury Taxes / Surcharges (per pax)</p>
+                  {priceBreakdownData.surcharges.length === 0 ? (
+                    <p className="text-gray-500 italic">No surcharges apply to this route.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {priceBreakdownData.surcharges.map((s: any, idx: number) => (
+                        <div key={idx} className="flex justify-between text-gray-300">
+                          <span>{s.label}</span>
+                          <span>{formatPrice(s.amount)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-gray-700 pt-2 flex justify-between font-semibold text-white">
+                        <span>Total Surcharges</span>
+                        <span>{formatPrice(priceBreakdownData.totalTaxPerPax)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-red-400">Failed to load breakdown.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

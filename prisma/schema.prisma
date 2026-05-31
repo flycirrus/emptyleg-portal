@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -43,8 +43,10 @@ model Flight {
   arrCity         String
   arrCountry      String
   distanceNm      Int
+  durationMin     Int?
   paxCapacity     Int
   calculatedPrice Int
+  estimatedTaxPerPax Int?
   isVisible       Boolean   @default(true)
   adminNotes      String?
   syncedAt        DateTime
@@ -77,13 +79,21 @@ enum InquiryStatus {
 }
 
 model PricingConfig {
-  id                     String   @id @default(cuid())
-  shortFlightThresholdNm Int      @default(400)
-  shortFlightMultiplier  Float    @default(18.9)
-  longFlightMultiplier   Float    @default(8.5)
-  minimumPrice           Int      @default(1700)
-  roundToNearest         Int      @default(100)
-  updatedAt              DateTime @updatedAt
+  id                     String      @id @default(cuid())
+  pricingMode            PricingMode @default(DISTANCE)
+  flightHourPrice        Int         @default(3000)
+  shortFlightThresholdNm Int         @default(400)
+  shortFlightMultiplier  Float       @default(18.9)
+  longFlightMultiplier   Float       @default(8.5)
+  minimumPrice           Int         @default(1700)
+  maximumPrice           Int?
+  roundToNearest         Int         @default(100)
+  updatedAt              DateTime    @updatedAt
+}
+
+enum PricingMode {
+  DISTANCE
+  TIME
 }
 
 model CountrySurcharge {
@@ -98,7 +108,7 @@ model CountrySurcharge {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([countryCode, label])
+  @@unique([countryCode, label, appliesTo])
 }
 
 enum SurchargeType {

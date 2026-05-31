@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
-import { Plane, LogOut, User, Menu, X } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Plane, LogOut, User, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
+import SignOutButton from "@/components/SignOutButton";
 
 export default function PublicLayout({
   children,
@@ -21,9 +22,9 @@ export default function PublicLayout({
           {/* Logo */}
           <Link href="/flights" className="flex items-center gap-2.5">
             <Plane className="h-6 w-6 text-[#c9a96e]" />
-            <span className="text-xl font-bold tracking-wide">
-              <span className="text-[#c9a96e]">HYPE</span>{" "}
-              <span className="hidden text-white sm:inline">Private Jets</span>
+            <span className="text-xl font-bold tracking-wide flex flex-col sm:flex-row sm:items-center sm:gap-1.5 leading-none">
+              <span className="text-[#c9a96e]">HYPE</span>
+              <span className="text-[0.65rem] sm:text-xl text-white uppercase tracking-widest sm:tracking-wide">Private Jets</span>
             </span>
           </Link>
 
@@ -38,20 +39,28 @@ export default function PublicLayout({
 
             {session?.user && (
               <div className="flex items-center gap-4">
+                {/* Admin button — only visible to ADMIN / MANAGER */}
+                {(["ADMIN", "MANAGER"] as string[]).includes(
+                  (session.user as { role?: string }).role ?? ""
+                ) && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-1.5 rounded-lg border border-[#c9a96e]/40 bg-[#c9a96e]/10 px-3 py-1.5 text-sm font-medium text-[#c9a96e] transition-colors hover:bg-[#c9a96e]/20"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Admin
+                  </Link>
+                )}
                 <div className="flex items-center gap-2 rounded-full border border-gray-700 bg-gray-800/50 px-3 py-1.5">
                   <User className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-300">
                     {session.user.name || session.user.email}
                   </span>
                 </div>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
-                  title="Sign out"
-                >
+                <SignOutButton className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
-                </button>
+                </SignOutButton>
               </div>
             )}
           </div>
@@ -88,13 +97,23 @@ export default function PublicLayout({
                     {session.user.name || session.user.email}
                   </span>
                 </div>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
-                >
+                {/* Admin link in mobile menu */}
+                {(["ADMIN", "MANAGER"] as string[]).includes(
+                  (session.user as { role?: string }).role ?? ""
+                ) && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-lg border border-[#c9a96e]/30 bg-[#c9a96e]/10 px-3 py-2 text-sm font-medium text-[#c9a96e] transition-colors hover:bg-[#c9a96e]/20"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Admin Panel
+                  </Link>
+                )}
+                <SignOutButton className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
                   <LogOut className="h-4 w-4" />
                   Sign Out
-                </button>
+                </SignOutButton>
               </>
             )}
           </div>

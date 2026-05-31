@@ -16,6 +16,7 @@ export interface FlightPublic {
   distanceNm: number;
   paxCapacity: number;
   calculatedPrice?: number;
+  estimatedTaxPerPax?: number;
 }
 
 export interface InquiryFormData {
@@ -27,10 +28,13 @@ export interface InquiryFormData {
 }
 
 export interface PricingConfigData {
+  pricingMode: "DISTANCE" | "TIME";
+  flightHourPrice: number;
   shortFlightThresholdNm: number;
   shortFlightMultiplier: number;
   longFlightMultiplier: number;
   minimumPrice: number;
+  maximumPrice?: number | null;
   roundToNearest: number;
 }
 

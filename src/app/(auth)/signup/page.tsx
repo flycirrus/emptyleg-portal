@@ -53,10 +53,12 @@ export default function SignupPage() {
     return (
       <div className="space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
-          <p className="text-sm tracking-widest uppercase text-muted">
-            Private Jets
-          </p>
+          <Link href="/" className="inline-block transition-transform hover:scale-105">
+            <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
+            <p className="text-sm tracking-widest uppercase text-muted mt-1">
+              Private Jets
+            </p>
+          </Link>
         </div>
         <div className="rounded-xl border border-border bg-surface p-8 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mx-auto">
@@ -94,10 +96,12 @@ export default function SignupPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
-        <p className="text-sm tracking-widest uppercase text-muted">
-          Private Jets
-        </p>
+        <Link href="/" className="inline-block transition-transform hover:scale-105">
+          <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
+          <p className="text-sm tracking-widest uppercase text-muted mt-1">
+            Private Jets
+          </p>
+        </Link>
         <p className="text-muted pt-4">Create your account</p>
       </div>
 
@@ -195,7 +199,7 @@ export default function SignupPage() {
       <p className="text-center text-sm text-muted">
         Already have an account?{" "}
         <Link href="/login" className="text-gold hover:text-gold-light">
-          Sign In
+          Login
         </Link>
       </p>
     </div>

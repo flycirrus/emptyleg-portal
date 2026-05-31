@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Calendar, Plane, Users, Loader2, X } from "lucide-react";
+import { Search, Calendar, Plane, Users, Loader2, X, Filter } from "lucide-react";
 import FlightCard from "@/components/public/FlightCard";
 import type { FlightPublic } from "@/types";
 
@@ -15,6 +15,7 @@ export default function FlightsPage() {
   const [canViewPrices, setCanViewPrices] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Filter state
   const [search, setSearch] = useState("");
@@ -99,7 +100,7 @@ export default function FlightsPage() {
     search || dateFrom || dateTo || aircraftType || minSeats;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 lg:px-8 sm:pb-8">
       {/* Heading */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -110,8 +111,54 @@ export default function FlightsPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
-      <div className="mb-8 rounded-xl border border-gray-800 bg-gray-900/60 p-4 sm:p-6">
+      {/* Mobile Filter Toggle (Docked Bottom Bar) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-800 bg-[#0a0a0a]/95 p-4 backdrop-blur-md sm:hidden">
+        <button
+          onClick={() => setShowMobileFilters(true)}
+          className="mx-auto flex w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-gray-800 py-3.5 text-sm font-semibold text-white transition-transform active:scale-95"
+        >
+          <Filter className="h-4 w-4 text-[#c9a96e]" />
+          Filter Flights
+          {hasActiveFilters && (
+            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#c9a96e] text-xs font-bold text-black">
+              !
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile Backdrop */}
+      {showMobileFilters && (
+        <div
+          className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm sm:hidden"
+          onClick={() => setShowMobileFilters(false)}
+        />
+      )}
+
+      {/* Filter Bar / Modal */}
+      <div
+        className={`
+          ${
+            showMobileFilters
+              ? "fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-2xl border-t border-gray-800 bg-gray-900 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:bottom-auto sm:translate-y-0"
+              : "hidden sm:block"
+          }
+          sm:sticky sm:inset-auto sm:top-20 sm:z-40 sm:mb-8 sm:max-h-none sm:overflow-visible sm:rounded-xl sm:border sm:border-gray-800 sm:bg-gray-900/95 sm:p-6 sm:shadow-2xl sm:backdrop-blur-sm
+        `}
+      >
+        {/* Mobile Header */}
+        {showMobileFilters && (
+          <div className="mb-6 flex items-center justify-between sm:hidden">
+            <h3 className="text-lg font-semibold text-white">Filters</h3>
+            <button
+              onClick={() => setShowMobileFilters(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {/* Search */}
           <div className="relative sm:col-span-2 lg:col-span-1">
@@ -125,28 +172,30 @@ export default function FlightsPage() {
             />
           </div>
 
-          {/* Date From */}
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-3 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
-              placeholder="From"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4 sm:contents">
+            {/* Date From */}
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-9 pr-2 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
+                placeholder="From"
+              />
+            </div>
 
-          {/* Date To */}
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-10 pr-3 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
-              placeholder="To"
-            />
+            {/* Date To */}
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-9 pr-2 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
+                placeholder="To"
+              />
+            </div>
           </div>
 
           {/* Aircraft Type */}
@@ -180,11 +229,25 @@ export default function FlightsPage() {
           </div>
         </div>
 
-        {/* Active Filter Indicator */}
+        {/* Action Buttons for Mobile */}
+        {showMobileFilters && (
+          <div className="mt-6 sm:hidden">
+            <button
+              onClick={() => setShowMobileFilters(false)}
+              className="w-full rounded-lg bg-[#c9a96e] py-3 text-sm font-semibold text-black transition-colors hover:bg-[#b0935d]"
+            >
+              Show Results
+            </button>
+          </div>
+        )}
+
+        {/* Active Filter Indicator (Desktop / Mobile combined state) */}
         {hasActiveFilters && (
           <div className="mt-4 flex items-center justify-between border-t border-gray-800 pt-4">
             <p className="text-sm text-gray-400">
-              {loading ? "Searching..." : `${flights.length} flight${flights.length !== 1 ? "s" : ""} found`}
+              {loading
+                ? "Searching..."
+                : `${flights.length} flight${flights.length !== 1 ? "s" : ""} found`}
             </p>
             <button
               onClick={clearFilters}
