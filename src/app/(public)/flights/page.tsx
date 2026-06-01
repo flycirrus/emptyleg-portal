@@ -106,9 +106,6 @@ export default function FlightsPage() {
         <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
           Available Empty Legs
         </h1>
-        <p className="mt-2 text-gray-400">
-          Browse our selection of empty leg flights at reduced rates.
-        </p>
       </div>
 
       {/* Mobile Filter Toggle (Docked Bottom Bar) */}
