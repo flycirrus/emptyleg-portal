@@ -73,10 +73,7 @@ export default function AdminLayout({
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-border px-6">
           <Link href="/admin" className="flex items-center gap-2">
-            <Plane className="h-6 w-6 text-gold" />
-            <span className="text-lg font-bold text-white">
-              HYPE <span className="text-gold">Admin</span>
-            </span>
+            <img src="/logo.png" alt="HYPE Admin" className="h-8 w-auto object-contain" />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
