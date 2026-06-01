@@ -1,15 +1,17 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import Link from "next/link";
 
 export default function PendingPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <Link href="/" className="inline-block transition-transform hover:scale-105 mb-8">
-        <img src="/logo.png" alt="HYPE Private Jets" className="h-20 w-auto object-contain mx-auto" />
-      </Link>
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
+        <p className="text-sm tracking-widest uppercase text-muted">
+          Private Jets
+        </p>
+      </div>
 
       {/* Card */}
       <div className="rounded-xl border border-border bg-surface p-8 text-center space-y-6">

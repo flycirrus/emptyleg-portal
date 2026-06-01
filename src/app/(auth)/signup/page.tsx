@@ -54,7 +54,10 @@ export default function SignupPage() {
       <div className="space-y-8">
         <div className="text-center space-y-2">
           <Link href="/" className="inline-block transition-transform hover:scale-105">
-            <img src="/logo.png" alt="HYPE Private Jets" className="h-16 w-auto object-contain mx-auto" />
+            <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
+            <p className="text-sm tracking-widest uppercase text-muted mt-1">
+              Private Jets
+            </p>
           </Link>
         </div>
         <div className="rounded-xl border border-border bg-surface p-8 text-center space-y-4">
@@ -94,9 +97,12 @@ export default function SignupPage() {
       {/* Header */}
       <div className="text-center space-y-2">
         <Link href="/" className="inline-block transition-transform hover:scale-105">
-          <img src="/logo.png" alt="HYPE Private Jets" className="h-16 w-auto object-contain mx-auto" />
+          <h1 className="text-3xl font-bold tracking-tight text-gold">HYPE</h1>
+          <p className="text-sm tracking-widest uppercase text-muted mt-1">
+            Private Jets
+          </p>
         </Link>
-        <p className="text-muted pt-4">Sign up with your credentials</p>
+        <p className="text-muted pt-4">Create your account</p>
       </div>
 
       {/* Card */}

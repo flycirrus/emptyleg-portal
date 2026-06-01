@@ -21,8 +21,12 @@ export default function PublicLayout({
       <header className="sticky top-0 z-50 border-b border-gray-800 bg-[#0a0a0a]/95 backdrop-blur-sm">
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo */}
-          <a href="https://hypejets.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 transition-transform hover:scale-105">
-            <img src="/logo.png" alt="HYPE Private Jets" className="h-10 w-auto object-contain" />
+          <a href="https://hypejets.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5">
+            <Plane className="h-6 w-6 text-[#c9a96e]" />
+            <span className="text-xl font-bold tracking-wide flex flex-col sm:flex-row sm:items-center sm:gap-1.5 leading-none">
+              <span className="text-[#c9a96e]">HYPE</span>
+              <span className="text-[0.65rem] sm:text-xl text-white uppercase tracking-widest sm:tracking-wide">Private Jets</span>
+            </span>
           </a>
 
           {/* Desktop Navigation */}
@@ -133,7 +137,10 @@ export default function PublicLayout({
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="HYPE Private Jets" className="h-8 w-auto object-contain opacity-70" />
+              <Plane className="h-5 w-5 text-[#c9a96e]" />
+              <span className="text-sm font-semibold tracking-wide text-gray-300">
+                HYPE Private Jets
+              </span>
             </div>
             <div className="flex flex-col items-center gap-1 text-center sm:items-end">
               <p className="text-xs text-gray-500">

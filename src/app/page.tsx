@@ -13,8 +13,25 @@ export default async function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Navigation */}
       <nav className="flex items-center justify-between px-8 py-6 border-b border-border/30">
-        <Link href="/" className="flex items-center gap-2.5 transition-transform hover:scale-105">
-          <img src="/logo.png" alt="HYPE Private Jets" className="h-12 w-auto object-contain" />
+        <Link href="/" className="flex items-center gap-2.5">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-6 w-6 text-gold"
+          >
+            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 3.2-3.8 3.8-2.6-.9c-.3-.1-.7 0-.9.3L1 15l4 2 2 4c.3-.2.4-.6.3-.9l-.9-2.6 3.8-3.8 3.2 6c.4-.2.7-.6.6-1.1z" />
+          </svg>
+          <span className="text-2xl font-black italic tracking-tighter text-gold">
+            HYPE
+          </span>
+          <span className="text-sm font-medium tracking-[0.2em] text-white uppercase mt-1">
+            Private Jets
+          </span>
         </Link>
       </nav>
 
