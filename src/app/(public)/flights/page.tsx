@@ -171,25 +171,25 @@ export default function FlightsPage() {
 
           <div className="flex flex-col gap-4 sm:contents">
             {/* Date From */}
-            <div className="relative">
+            <div className="relative w-full">
               <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-9 pr-2 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
+                className="w-full appearance-none rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-9 pr-3 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
                 placeholder="From"
               />
             </div>
 
             {/* Date To */}
-            <div className="relative">
+            <div className="relative w-full">
               <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-9 pr-2 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
+                className="w-full appearance-none rounded-lg border border-gray-700 bg-gray-800 py-2.5 pl-9 pr-3 text-sm text-white transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e] [color-scheme:dark]"
                 placeholder="To"
               />
             </div>
