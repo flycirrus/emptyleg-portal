@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard,
   Plane,
@@ -32,7 +34,20 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Redirect if not admin/manager
+  if (status === "unauthenticated") {
+    redirect('/login');
+  }
+
+  if (status === "authenticated") {
+    const role = (session?.user as any)?.role;
+    if (role !== 'ADMIN' && role !== 'MANAGER') {
+      redirect('/flights');
+    }
+  }
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin';
