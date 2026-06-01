@@ -1,6 +1,6 @@
 import { syncFlights } from "@/lib/leon-api";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -11,4 +11,9 @@ export async function POST(request: Request) {
   const result = await syncFlights();
 
   return Response.json(result);
+}
+
+// Allow manual POST triggers as well
+export async function POST(request: Request) {
+  return GET(request);
 }
