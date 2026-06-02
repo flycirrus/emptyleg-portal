@@ -206,10 +206,29 @@ export async function syncFlights(): Promise<{
       synced++;
     }
 
-    // Remove flights that departed in the past
-    await prisma.flight.deleteMany({
-      where: { depDatetimeUtc: { lt: new Date() } },
+    // Hide past flights instead of deleting them (deletion fails if inquiries exist)
+    await prisma.flight.updateMany({
+      where: {
+        depDatetimeUtc: { lt: new Date() },
+        isVisible: true,
+      },
+      data: { isVisible: false },
     });
+
+    // Only hard-delete past flights that have NO inquiries linked
+    const pastFlightsWithNoInquiries = await prisma.flight.findMany({
+      where: {
+        depDatetimeUtc: { lt: new Date() },
+        inquiries: { none: {} },
+      },
+      select: { id: true },
+    });
+    if (pastFlightsWithNoInquiries.length > 0) {
+      await prisma.flight.deleteMany({
+        where: { id: { in: pastFlightsWithNoInquiries.map((f) => f.id) } },
+      });
+    }
+
 
     await prisma.syncLog.update({
       where: { id: syncLog.id },
