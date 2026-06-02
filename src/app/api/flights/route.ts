@@ -80,7 +80,13 @@ export async function GET(request: NextRequest) {
     arrCountry: f.arrCountry,
     distanceNm: f.distanceNm,
     paxCapacity: f.paxCapacity,
-    ...(showPrices ? { calculatedPrice: f.calculatedPrice } : {}),
+    ...(showPrices
+      ? {
+          // manualPrice overrides calculatedPrice when set by admin
+          calculatedPrice: f.manualPrice ?? f.calculatedPrice,
+          estimatedTaxPerPax: f.manualPrice ? null : f.estimatedTaxPerPax,
+        }
+      : {}),
   }));
 
   return Response.json({ flights: result, canViewPrices: showPrices });

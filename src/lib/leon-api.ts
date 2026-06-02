@@ -34,11 +34,22 @@ async function getAccessToken(refreshToken: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Leon auth failed: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(`Leon auth failed: HTTP ${response.status}${body ? ` — ${body.slice(0, 200)}` : ""}`);
   }
 
-  const token = await response.text();
-  return `Bearer ${token}`;
+  // Leon may return the token as raw text OR as JSON { access_token: "..." }
+  const raw = await response.text();
+  try {
+    const json = JSON.parse(raw);
+    const token = json.access_token || json.token || json.accessToken;
+    if (token) return `Bearer ${token}`;
+  } catch {
+    // Not JSON — use raw text directly
+  }
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error("Leon auth returned empty token");
+  return `Bearer ${trimmed}`;
 }
 
 async function fetchEmptyLegs(authToken: string): Promise<LeonFlight[]> {
@@ -92,12 +103,26 @@ async function fetchEmptyLegs(authToken: string): Promise<LeonFlight[]> {
   });
 
   if (!response.ok) {
-    throw new Error(`Leon API error: ${response.status}`);
+    const body = await response.text().catch(() => "");
+    throw new Error(`Leon API error: HTTP ${response.status}${body ? ` — ${body.slice(0, 200)}` : ""}`);
   }
 
   const json = await response.json();
-  return json.data.aircraftAvailability.emptyLegList;
+
+  // GraphQL can return HTTP 200 but with errors in the response body
+  if (json.errors && json.errors.length > 0) {
+    const msgs = json.errors.map((e: { message: string }) => e.message).join("; ");
+    throw new Error(`Leon GraphQL error: ${msgs}`);
+  }
+
+  const list = json.data?.aircraftAvailability?.emptyLegList;
+  if (!Array.isArray(list)) {
+    throw new Error(`Leon API returned unexpected data structure: ${JSON.stringify(json).slice(0, 200)}`);
+  }
+
+  return list;
 }
+
 
 export async function syncFlights(): Promise<{
   synced: number;

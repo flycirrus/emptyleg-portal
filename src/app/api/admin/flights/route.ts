@@ -27,6 +27,7 @@ const updateSchema = z.object({
   flightId: z.string(),
   isVisible: z.boolean().optional(),
   adminNotes: z.string().optional(),
+  manualPrice: z.number().int().positive().nullable().optional(),
 });
 
 export async function PUT(request: Request) {

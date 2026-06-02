@@ -47,6 +47,7 @@ model Flight {
   paxCapacity     Int
   calculatedPrice Int
   estimatedTaxPerPax Int?
+  manualPrice     Int?
   isVisible       Boolean   @default(true)
   adminNotes      String?
   syncedAt        DateTime

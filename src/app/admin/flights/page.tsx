@@ -13,6 +13,7 @@ import {
   Check,
   MessageSquare,
   Info,
+  Pencil,
 } from 'lucide-react';
 import { formatPrice, formatDate, formatTime } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ interface Flight {
   distanceNm: number;
   paxCapacity: number;
   calculatedPrice: number;
+  manualPrice: number | null;
   isVisible: boolean;
   adminNotes: string | null;
   _count: { inquiries: number };
@@ -46,6 +48,10 @@ export default function FlightsPage() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Manual price editing state
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [priceText, setPriceText] = useState('');
 
   const [selectedFlightPrice, setSelectedFlightPrice] = useState<string | null>(null);
   const [priceBreakdownData, setPriceBreakdownData] = useState<any | null>(null);
@@ -133,6 +139,34 @@ export default function FlightsPage() {
     }
   };
 
+  const saveManualPrice = async (flightId: string) => {
+    const parsed = priceText.trim() === '' ? null : parseInt(priceText.replace(/[^0-9]/g, ''), 10);
+    if (priceText.trim() !== '' && (isNaN(parsed as number) || (parsed as number) <= 0)) {
+      setError('Invalid price. Enter a positive number or leave empty to reset.');
+      return;
+    }
+    setSavingId(flightId + '-price');
+    try {
+      const res = await fetch('/api/admin/flights', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flightId, manualPrice: parsed }),
+      });
+      if (!res.ok) throw new Error('Failed to save price');
+      setFlights((prev) =>
+        prev.map((f) =>
+          f.id === flightId ? { ...f, manualPrice: parsed } : f
+        )
+      );
+      setEditingPriceId(null);
+      setPriceText('');
+    } catch {
+      setError('Failed to save manual price');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -167,7 +201,7 @@ export default function FlightsPage() {
       } else if (sortField === 'flightNo') {
         cmp = a.flightNo.localeCompare(b.flightNo);
       } else if (sortField === 'calculatedPrice') {
-        cmp = a.calculatedPrice - b.calculatedPrice;
+        cmp = (a.manualPrice ?? a.calculatedPrice) - (b.manualPrice ?? b.calculatedPrice);
       } else if (sortField === 'paxCapacity') {
         cmp = a.paxCapacity - b.paxCapacity;
       }
@@ -207,9 +241,9 @@ export default function FlightsPage() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <AlertCircle className="h-12 w-12 text-red-400" />
-        <p className="text-red-400">{error}</p>
+        <p className="text-red-400 text-center max-w-md text-sm">{error}</p>
         <button
-          onClick={fetchFlights}
+          onClick={() => { setError(null); fetchFlights(); }}
           className="btn-gold rounded-lg px-4 py-2 text-sm"
         >
           Retry
@@ -224,7 +258,7 @@ export default function FlightsPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Flight Management</h1>
         <p className="text-sm text-muted">
-          Manage empty leg flights, visibility, and notes
+          Manage empty leg flights, visibility, notes and prices
         </p>
       </div>
 
@@ -340,15 +374,83 @@ export default function FlightsPage() {
                   <td className="px-4 py-3 text-sm text-white">
                     {flight.paxCapacity}
                   </td>
+
+                  {/* Price cell with manual edit */}
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => fetchPriceBreakdown(flight.id)}
-                      className="group flex items-center gap-1.5 text-sm font-medium text-gold transition-colors hover:text-[#e5c587]"
-                    >
-                      {formatPrice(flight.calculatedPrice)}
-                      <Info className="h-3.5 w-3.5 opacity-60 transition-opacity group-hover:opacity-100" />
-                    </button>
+                    {editingPriceId === flight.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted">€</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={priceText}
+                          onChange={(e) => setPriceText(e.target.value)}
+                          className="input-dark w-24 rounded px-2 py-1 text-xs"
+                          placeholder="e.g. 3500"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveManualPrice(flight.id);
+                            if (e.key === 'Escape') {
+                              setEditingPriceId(null);
+                              setPriceText('');
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => saveManualPrice(flight.id)}
+                          disabled={savingId === flight.id + '-price'}
+                          className="rounded p-1 text-green-400 hover:bg-green-400/10"
+                          title="Save"
+                        >
+                          {savingId === flight.id + '-price' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingPriceId(null);
+                            setPriceText('');
+                          }}
+                          className="rounded p-1 text-red-400 hover:bg-red-400/10"
+                          title="Cancel"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col">
+                          <button
+                            onClick={() => fetchPriceBreakdown(flight.id)}
+                            className="group flex items-center gap-1 text-sm font-medium transition-colors hover:text-[#e5c587]"
+                          >
+                            <span className={flight.manualPrice ? 'text-amber-400' : 'text-gold'}>
+                              {formatPrice(flight.manualPrice ?? flight.calculatedPrice)}
+                            </span>
+                            {!flight.manualPrice && (
+                              <Info className="h-3 w-3 text-gold/60 opacity-60 transition-opacity group-hover:opacity-100" />
+                            )}
+                          </button>
+                          {flight.manualPrice && (
+                            <span className="text-[10px] text-amber-400/70 leading-none">manual</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setEditingPriceId(flight.id);
+                            setPriceText(flight.manualPrice ? String(flight.manualPrice) : '');
+                          }}
+                          className="rounded p-1 text-muted hover:bg-surface-light hover:text-white transition-colors"
+                          title="Set manual price (leave empty to reset)"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </td>
+
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => toggleVisibility(flight)}

@@ -272,8 +272,23 @@ export default function FlightDetailPage({
                 ) : null}
               </div>
             </div>
+            {/* Surcharge notice for France / Italy flights */}
+            {(() => {
+              const dep = (flight.depCountry || '').toLowerCase();
+              const arr = (flight.arrCountry || '').toLowerCase();
+              const hasFrance = dep.includes('france') || arr.includes('france');
+              const hasItaly = dep.includes('italy') || arr.includes('italy') || dep.includes('italia') || arr.includes('italia');
+              if (!hasFrance && !hasItaly) return null;
+              const countries = [hasFrance && 'French tax', hasItaly && 'Italian luxury tax'].filter(Boolean).join(' and/or ');
+              return (
+                <p className="mt-2 text-[11px] text-gray-500 leading-snug">
+                  * Please note there is a surcharge of {countries} subjected to each passenger.
+                </p>
+              );
+            })()}
           </div>
         )}
+
 
         {/* Flight Number */}
         <div className="border-t border-gray-800 px-6 py-3 sm:px-10">
