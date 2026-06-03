@@ -24,12 +24,17 @@ interface SyncLog {
 }
 
 interface LeonFlight {
-  flightNid: string;
+  flightNid: string | number;
   flightNo: string;
   startTimeUTC: string;
   route: string;
   from: string;
   to: string;
+  status?: string | null;
+  isCnl?: boolean | null;
+  isActive?: boolean | null;
+  isConfirmed?: boolean | null;
+  [key: string]: unknown;
 }
 
 interface DbFlight {
@@ -46,36 +51,23 @@ interface DbFlight {
   presentInLeon: boolean;
 }
 
-interface LeonFlight {
-  flightNid: string;
-  flightNo: string;
-  startTimeUTC: string;
-  route: string;
-  from: string;
-  to: string;
-  // possible status/cancellation fields
-  status?: string | null;
-  isCancelled?: boolean | null;
-  cancelled?: boolean | null;
-  isConfirmed?: boolean | null;
-  isActive?: boolean | null;
-  isDeleted?: boolean | null;
-  type?: string | null;
-  legType?: string | null;
-  [key: string]: unknown;
-}
-
 interface DebugResult {
   leonFlightCount: number;
   dbFlightCount: number;
   missingFromLeonCount: number;
   schemaFields: string[];
-  usedFields: string[];
-  nceGvaInLeon: Record<string, unknown>[];
+  queryErrors: string[];
   leonFlightsRaw: Record<string, unknown>[];
   leonFlights: LeonFlight[];
   dbFlights: DbFlight[];
   missingFromLeon: DbFlight[];
+  // Target flight 70435186
+  targetFlightId: string;
+  specificFlight: Record<string, unknown> | null;
+  specificFlightError: string | null;
+  specificFlightRawResponse: unknown;
+  targetInEmptyLegList: Record<string, unknown> | null;
+  targetFoundInEmptyLegList: boolean;
 }
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
@@ -437,20 +429,71 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* NCE→GVA raw data from Leon — key for finding cancellation field */}
-            {debugResult.nceGvaInLeon.length > 0 && (
-              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-4">
-                <h4 className="text-sm font-semibold text-yellow-400 mb-2">
-                  🔍 NCE→GVA in Leons API gefunden — vollständige Rohdaten:
-                </h4>
-                <pre className="text-xs text-muted bg-background rounded p-3 overflow-x-auto">
-                  {JSON.stringify(debugResult.nceGvaInLeon, null, 2)}
-                </pre>
-                <p className="text-xs text-muted mt-2">
-                  Suche nach einem Feld wie <code className="text-yellow-400">status</code>, <code className="text-yellow-400">isCancelled</code>, <code className="text-yellow-400">cancelled</code> oder ähnlichem.
-                </p>
+            {/* ── Spotlight: Flug 70435186 (BROKLAO→MADRID) ─────────────────── */}
+            <div className={`rounded-lg border p-4 ${
+              debugResult.specificFlight || debugResult.targetFoundInEmptyLegList
+                ? 'border-amber-500/40 bg-amber-500/5'
+                : 'border-red-500/40 bg-red-500/5'
+            }`}>
+              <h4 className="text-sm font-semibold text-amber-400 mb-3">
+                🎯 Spotlight: Flug ID {debugResult.targetFlightId} (BROKLAO→MADRID)
+              </h4>
+
+              <div className="flex flex-wrap gap-3 mb-3 text-xs">
+                <span className={`rounded-full px-2.5 py-1 font-medium ${
+                  debugResult.targetFoundInEmptyLegList
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-red-500/20 text-red-400'
+                }`}>
+                  emptyLegList: {debugResult.targetFoundInEmptyLegList ? '✓ gefunden' : '✗ NICHT gefunden'}
+                </span>
+                <span className={`rounded-full px-2.5 py-1 font-medium ${
+                  debugResult.specificFlight
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-red-500/20 text-red-400'
+                }`}>
+                  leg(nid) Query: {debugResult.specificFlight ? '✓ gefunden' : '✗ NICHT gefunden / Fehler'}
+                </span>
               </div>
-            )}
+
+              {debugResult.specificFlightError && (
+                <p className="text-xs text-red-400 mb-2">⚠ leg query error: {debugResult.specificFlightError}</p>
+              )}
+
+              {/* Raw data from direct leg query */}
+              {debugResult.specificFlight && (
+                <details open>
+                  <summary className="cursor-pointer text-xs text-amber-400/80 hover:text-amber-400 mb-2">
+                    Vollständige Rohdaten (leg query) — alle Felder
+                  </summary>
+                  <pre className="text-xs text-muted bg-background rounded p-3 overflow-x-auto max-h-96">
+                    {JSON.stringify(debugResult.specificFlight, null, 2)}
+                  </pre>
+                </details>
+              )}
+
+              {/* Raw data from emptyLegList if found there */}
+              {debugResult.targetInEmptyLegList && (
+                <details open>
+                  <summary className="cursor-pointer text-xs text-amber-400/80 hover:text-amber-400 mb-2 mt-2">
+                    Rohdaten aus emptyLegList
+                  </summary>
+                  <pre className="text-xs text-muted bg-background rounded p-3 overflow-x-auto max-h-64">
+                    {JSON.stringify(debugResult.targetInEmptyLegList, null, 2)}
+                  </pre>
+                </details>
+              )}
+
+              {/* Raw API response for leg query (always show for debugging) */}
+              <details>
+                <summary className="cursor-pointer text-xs text-muted hover:text-white mt-2">
+                  Rohe API-Antwort der leg() Abfrage
+                </summary>
+                <pre className="text-xs text-muted bg-background rounded p-3 overflow-x-auto max-h-48 mt-2">
+                  {JSON.stringify(debugResult.specificFlightRawResponse, null, 2)}
+                </pre>
+              </details>
+            </div>
 
             {/* Schema fields from introspection */}
             {debugResult.schemaFields.length > 0 && (
@@ -468,40 +511,62 @@ export default function SettingsPage() {
               </details>
             )}
 
+            {/* Query errors (if full field list caused errors) */}
+            {debugResult.queryErrors?.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs text-red-400 hover:text-red-300">
+                  ⚠ {debugResult.queryErrors.length} Felder nicht verfügbar (GraphQL-Fehler)
+                </summary>
+                <div className="mt-2 space-y-1">
+                  {debugResult.queryErrors.map((e, i) => (
+                    <p key={i} className="text-xs text-red-400/70 font-mono">{e}</p>
+                  ))}
+                </div>
+              </details>
+            )}
+
             {/* What Leon currently returns */}
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-muted hover:text-white transition-colors">
                 Alle {debugResult.leonFlightCount} Flüge von Leon anzeigen
               </summary>
               <div className="mt-2 overflow-x-auto">
-                <table className="w-full min-w-[500px] text-xs">
+                <table className="w-full min-w-[600px] text-xs">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="px-3 py-2 text-left text-muted">Route</th>
                       <th className="px-3 py-2 text-left text-muted">Datum (UTC)</th>
                       <th className="px-3 py-2 text-left text-muted">Leon ID</th>
-                      {debugResult.usedFields.length > 0 && (
-                        <th className="px-3 py-2 text-left text-muted">Status-Felder</th>
-                      )}
+                      <th className="px-3 py-2 text-left text-muted">isCnl</th>
+                      <th className="px-3 py-2 text-left text-muted">isActive</th>
+                      <th className="px-3 py-2 text-left text-muted">status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {debugResult.leonFlights.map((f) => (
-                      <tr key={String(f.flightNid)} className={f.route === 'NCE → GVA' ? 'bg-yellow-500/10' : ''}>
+                      <tr
+                        key={String(f.flightNid)}
+                        className={`${
+                          String(f.flightNid) === debugResult.targetFlightId
+                            ? 'bg-amber-500/10'
+                            : ''
+                        }`}
+                      >
                         <td className="px-3 py-2 text-white">
                           {f.route} <span className="text-muted">({f.from} → {f.to})</span>
-                          {f.route === 'NCE → GVA' && <span className="ml-2 text-yellow-400 font-bold">← dieser!</span>}
+                          {String(f.flightNid) === debugResult.targetFlightId && (
+                            <span className="ml-2 text-amber-400 font-bold">← 70435186</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-muted">{new Date(String(f.startTimeUTC)).toLocaleString('de-DE', { timeZone: 'UTC' })}</td>
                         <td className="px-3 py-2 text-muted font-mono">{String(f.flightNid)}</td>
-                        {debugResult.usedFields.length > 0 && (
-                          <td className="px-3 py-2 text-muted font-mono text-xs">
-                            {debugResult.usedFields
-                              .filter(field => f[field] !== null && f[field] !== undefined)
-                              .map(field => `${field}=${JSON.stringify(f[field])}`)
-                              .join(', ') || '—'}
-                          </td>
-                        )}
+                        <td className={`px-3 py-2 font-mono ${
+                          f.isCnl === true ? 'text-red-400' : f.isCnl === false ? 'text-green-400' : 'text-muted'
+                        }`}>{f.isCnl === null || f.isCnl === undefined ? '—' : String(f.isCnl)}</td>
+                        <td className={`px-3 py-2 font-mono ${
+                          f.isActive === false ? 'text-red-400' : f.isActive === true ? 'text-green-400' : 'text-muted'
+                        }`}>{f.isActive === null || f.isActive === undefined ? '—' : String(f.isActive)}</td>
+                        <td className="px-3 py-2 text-muted font-mono">{f.status !== null && f.status !== undefined ? String(f.status) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
