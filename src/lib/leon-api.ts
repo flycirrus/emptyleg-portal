@@ -123,7 +123,6 @@ async function fetchEmptyLegs(authToken: string): Promise<LeonFlight[]> {
   return list;
 }
 
-
 export async function syncFlights(): Promise<{
   synced: number;
   error?: string;
@@ -145,6 +144,9 @@ export async function syncFlights(): Promise<{
     const flights = await fetchEmptyLegs(authToken);
     const pricingConfig = await getPricingConfig();
     const surcharges = await getActiveSurcharges();
+
+    // Collect all Leon flight IDs from this sync response
+    const activeLeonIds = new Set(flights.map((f) => String(f.flightNid)));
 
     let synced = 0;
     for (const flight of flights) {
@@ -206,6 +208,45 @@ export async function syncFlights(): Promise<{
       synced++;
     }
 
+    // ── Hide/delete future flights that Leon no longer returns ────────────────
+    // When a flight is cancelled or removed in Leon it will be missing from the
+    // next sync response. Without this step those flights would stay visible in
+    // the portal forever because the date-based cleanup below only removes past
+    // flights.
+    const futureFlightsInDb = await prisma.flight.findMany({
+      where: { depDatetimeUtc: { gte: new Date() } },
+      select: {
+        id: true,
+        leonFlightId: true,
+        inquiries: { select: { id: true } },
+      },
+    });
+
+    const removedFromLeon = futureFlightsInDb.filter(
+      (f) => !activeLeonIds.has(f.leonFlightId)
+    );
+
+    if (removedFromLeon.length > 0) {
+      const removedIds = removedFromLeon.map((f) => f.id);
+
+      // Hide immediately (safe even when inquiries exist)
+      await prisma.flight.updateMany({
+        where: { id: { in: removedIds }, isVisible: true },
+        data: { isVisible: false },
+      });
+
+      // Hard-delete only those with no inquiries attached
+      const removedWithNoInquiries = removedFromLeon
+        .filter((f) => f.inquiries.length === 0)
+        .map((f) => f.id);
+
+      if (removedWithNoInquiries.length > 0) {
+        await prisma.flight.deleteMany({
+          where: { id: { in: removedWithNoInquiries } },
+        });
+      }
+    }
+
     // Hide past flights instead of deleting them (deletion fails if inquiries exist)
     await prisma.flight.updateMany({
       where: {
@@ -228,7 +269,6 @@ export async function syncFlights(): Promise<{
         where: { id: { in: pastFlightsWithNoInquiries.map((f) => f.id) } },
       });
     }
-
 
     await prisma.syncLog.update({
       where: { id: syncLog.id },
