@@ -56,15 +56,15 @@ async function main() {
   });
 
   await prisma.countrySurcharge.upsert({
-    where: { countryCode_label_appliesTo: { countryCode: "FR", label: "French Aviation Tax", appliesTo: "BOTH" } },
-    update: {},
+    where: { countryCode_label_appliesTo: { countryCode: "FR", label: "French Luxury Tax", appliesTo: "ARRIVAL" } },
+    update: { amount: 420, appliesTo: "ARRIVAL", label: "French Luxury Tax" },
     create: {
       countryCode: "FR",
       countryName: "France",
       surchargeType: "FIXED",
-      amount: 200,
-      label: "French Aviation Tax",
-      appliesTo: "BOTH",
+      amount: 420,
+      label: "French Luxury Tax",
+      appliesTo: "ARRIVAL",
       isActive: true,
     },
   });
