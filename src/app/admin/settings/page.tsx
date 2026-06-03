@@ -46,10 +46,33 @@ interface DbFlight {
   presentInLeon: boolean;
 }
 
+interface LeonFlight {
+  flightNid: string;
+  flightNo: string;
+  startTimeUTC: string;
+  route: string;
+  from: string;
+  to: string;
+  // possible status/cancellation fields
+  status?: string | null;
+  isCancelled?: boolean | null;
+  cancelled?: boolean | null;
+  isConfirmed?: boolean | null;
+  isActive?: boolean | null;
+  isDeleted?: boolean | null;
+  type?: string | null;
+  legType?: string | null;
+  [key: string]: unknown;
+}
+
 interface DebugResult {
   leonFlightCount: number;
   dbFlightCount: number;
   missingFromLeonCount: number;
+  schemaFields: string[];
+  usedFields: string[];
+  nceGvaInLeon: Record<string, unknown>[];
+  leonFlightsRaw: Record<string, unknown>[];
   leonFlights: LeonFlight[];
   dbFlights: DbFlight[];
   missingFromLeon: DbFlight[];
@@ -414,6 +437,37 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {/* NCE→GVA raw data from Leon — key for finding cancellation field */}
+            {debugResult.nceGvaInLeon.length > 0 && (
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-4">
+                <h4 className="text-sm font-semibold text-yellow-400 mb-2">
+                  🔍 NCE→GVA in Leons API gefunden — vollständige Rohdaten:
+                </h4>
+                <pre className="text-xs text-muted bg-background rounded p-3 overflow-x-auto">
+                  {JSON.stringify(debugResult.nceGvaInLeon, null, 2)}
+                </pre>
+                <p className="text-xs text-muted mt-2">
+                  Suche nach einem Feld wie <code className="text-yellow-400">status</code>, <code className="text-yellow-400">isCancelled</code>, <code className="text-yellow-400">cancelled</code> oder ähnlichem.
+                </p>
+              </div>
+            )}
+
+            {/* Schema fields from introspection */}
+            {debugResult.schemaFields.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs text-muted hover:text-white transition-colors">
+                  Leon EmptyLeg Schema — alle {debugResult.schemaFields.length} verfügbaren Felder
+                </summary>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {debugResult.schemaFields.map((field) => (
+                    <span key={field} className="rounded bg-surface-light px-2 py-0.5 text-xs font-mono text-gold">
+                      {field}
+                    </span>
+                  ))}
+                </div>
+              </details>
+            )}
+
             {/* What Leon currently returns */}
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-muted hover:text-white transition-colors">
@@ -426,14 +480,28 @@ export default function SettingsPage() {
                       <th className="px-3 py-2 text-left text-muted">Route</th>
                       <th className="px-3 py-2 text-left text-muted">Datum (UTC)</th>
                       <th className="px-3 py-2 text-left text-muted">Leon ID</th>
+                      {debugResult.usedFields.length > 0 && (
+                        <th className="px-3 py-2 text-left text-muted">Status-Felder</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {debugResult.leonFlights.map((f) => (
-                      <tr key={f.flightNid}>
-                        <td className="px-3 py-2 text-white">{f.route} <span className="text-muted">({f.from} → {f.to})</span></td>
-                        <td className="px-3 py-2 text-muted">{new Date(f.startTimeUTC).toLocaleString('de-DE', { timeZone: 'UTC' })}</td>
-                        <td className="px-3 py-2 text-muted font-mono">{f.flightNid}</td>
+                      <tr key={String(f.flightNid)} className={f.route === 'NCE → GVA' ? 'bg-yellow-500/10' : ''}>
+                        <td className="px-3 py-2 text-white">
+                          {f.route} <span className="text-muted">({f.from} → {f.to})</span>
+                          {f.route === 'NCE → GVA' && <span className="ml-2 text-yellow-400 font-bold">← dieser!</span>}
+                        </td>
+                        <td className="px-3 py-2 text-muted">{new Date(String(f.startTimeUTC)).toLocaleString('de-DE', { timeZone: 'UTC' })}</td>
+                        <td className="px-3 py-2 text-muted font-mono">{String(f.flightNid)}</td>
+                        {debugResult.usedFields.length > 0 && (
+                          <td className="px-3 py-2 text-muted font-mono text-xs">
+                            {debugResult.usedFields
+                              .filter(field => f[field] !== null && f[field] !== undefined)
+                              .map(field => `${field}=${JSON.stringify(f[field])}`)
+                              .join(', ') || '—'}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -442,6 +510,7 @@ export default function SettingsPage() {
             </details>
           </div>
         )}
+
       </div>
 
       {/* Sync history */}

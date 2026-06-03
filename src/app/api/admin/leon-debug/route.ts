@@ -46,8 +46,38 @@ export async function GET() {
     const startDate = now.toISOString().split("T")[0];
     const endDate = end.toISOString().split("T")[0];
 
-    // Query with ALL possible status/cancellation fields so we can see raw data
-    const query = `
+    // ── 1. GraphQL Introspection: find ALL available fields on emptyLegList ───
+    const introspectionQuery = `
+      query {
+        __type(name: "EmptyLeg") {
+          name
+          fields {
+            name
+            type { name kind ofType { name kind } }
+          }
+        }
+      }
+    `;
+
+    let schemaFields: string[] = [];
+    try {
+      const introResp = await fetch(`${LEON_API_URL}/api/graphql/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authToken },
+        body: JSON.stringify({ query: introspectionQuery }),
+      });
+      const introJson = await introResp.json();
+      schemaFields = (introJson.data?.__type?.fields ?? []).map(
+        (f: { name: string }) => f.name
+      );
+    } catch {
+      // Introspection might be disabled — continue without it
+    }
+
+    // ── 2. Main query: include all known potential status/cancellation fields ──
+    // We try to include any field that might indicate the flight was cancelled.
+    // Unknown fields will cause a GraphQL error — we catch and retry without them.
+    const tryQuery = (extraFields: string) => `
       query {
         aircraftAvailability {
           emptyLegList(
@@ -59,23 +89,56 @@ export async function GET() {
             startTimeUTC
             endTimeUTC
             startAirport { code { iata icao } city country }
-            endAirport { code { iata icao } city country }
+            endAirport   { code { iata icao } city country }
             acft { registration acftType { iCAO } paxCapacity }
             dist
+            ${extraFields}
           }
         }
       }
     `;
 
-    const response = await fetch(`${LEON_API_URL}/api/graphql/`, {
+    // Common status/cancellation fields used by Leon and similar aviation systems
+    const candidateFields = [
+      "status",
+      "isCancelled",
+      "cancelled",
+      "isConfirmed",
+      "isOption",
+      "flightStatus",
+      "statusCode",
+      "isActive",
+      "isDeleted",
+      "type",
+      "legType",
+    ];
+
+    let leonFlights: Record<string, unknown>[] = [];
+    let usedFields: string[] = [];
+
+    // Try with all candidate fields first
+    const fullResp = await fetch(`${LEON_API_URL}/api/graphql/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: authToken },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query: tryQuery(candidateFields.join("\n            ")) }),
     });
+    const fullJson = await fullResp.json();
 
-    const json = await response.json();
-    // Return the FULL raw Leon response so we can see every field
-    const leonFlights: Record<string, unknown>[] = json.data?.aircraftAvailability?.emptyLegList ?? [];
+    if (!fullJson.errors) {
+      // All fields worked
+      leonFlights = fullJson.data?.aircraftAvailability?.emptyLegList ?? [];
+      usedFields = candidateFields;
+    } else {
+      // Some fields are unknown — fall back to base query and note which worked
+      const baseResp = await fetch(`${LEON_API_URL}/api/graphql/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authToken },
+        body: JSON.stringify({ query: tryQuery("") }),
+      });
+      const baseJson = await baseResp.json();
+      leonFlights = baseJson.data?.aircraftAvailability?.emptyLegList ?? [];
+      usedFields = [];
+    }
 
     // Get all future flights from the DB
     const dbFlights = await prisma.flight.findMany({
@@ -109,8 +172,18 @@ export async function GET() {
       leonFlightCount: leonFlights.length,
       dbFlightCount: dbFlights.length,
       missingFromLeonCount: missingFromLeon.length,
-      // Full raw Leon data — shows all fields including any status/cancelled flags
+      // What fields Leon's schema exposes (from introspection)
+      schemaFields,
+      // Which extra fields we successfully queried
+      usedFields,
+      // Full raw Leon data per flight — look here for status/cancelled fields!
       leonFlightsRaw: leonFlights,
+      // Spotlight: raw data for any NCE→GVA flight found in Leon
+      nceGvaInLeon: leonFlights.filter((f) => {
+        const dep = (f.startAirport as {code:{iata:string}})?.code?.iata?.toUpperCase();
+        const arr = (f.endAirport as {code:{iata:string}})?.code?.iata?.toUpperCase();
+        return dep === "NCE" && arr === "GVA";
+      }),
       // Simplified view for the UI
       leonFlights: leonFlights.map((f) => ({
         flightNid: f.flightNid,
@@ -119,7 +192,12 @@ export async function GET() {
         route: `${(f.startAirport as {code:{iata:string}}).code.iata} → ${(f.endAirport as {code:{iata:string}}).code.iata}`,
         from: (f.startAirport as {city:string}).city,
         to: (f.endAirport as {city:string}).city,
+        // Include any extra fields we found
+        ...(usedFields.length > 0
+          ? Object.fromEntries(usedFields.map((field) => [field, f[field] ?? null]))
+          : {}),
       })),
+
       dbFlights: dbWithStatus,
       missingFromLeon,
     });
