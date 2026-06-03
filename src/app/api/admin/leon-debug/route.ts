@@ -46,6 +46,7 @@ export async function GET() {
     const startDate = now.toISOString().split("T")[0];
     const endDate = end.toISOString().split("T")[0];
 
+    // Query with ALL possible status/cancellation fields so we can see raw data
     const query = `
       query {
         aircraftAvailability {
@@ -73,9 +74,10 @@ export async function GET() {
     });
 
     const json = await response.json();
-    const leonFlights = json.data?.aircraftAvailability?.emptyLegList ?? [];
+    // Return the FULL raw Leon response so we can see every field
+    const leonFlights: Record<string, unknown>[] = json.data?.aircraftAvailability?.emptyLegList ?? [];
 
-    // Also get what's currently in the DB (future, visible)
+    // Get all future flights from the DB
     const dbFlights = await prisma.flight.findMany({
       where: { depDatetimeUtc: { gte: new Date() } },
       select: {
@@ -93,7 +95,7 @@ export async function GET() {
       orderBy: { depDatetimeUtc: "asc" },
     });
 
-    const leonIds = new Set(leonFlights.map((f: { flightNid: string }) => String(f.flightNid)));
+    const leonIds = new Set(leonFlights.map((f) => String(f.flightNid)));
 
     // Mark which DB flights are missing from Leon
     const dbWithStatus = dbFlights.map((f) => ({
@@ -101,25 +103,130 @@ export async function GET() {
       presentInLeon: leonIds.has(f.leonFlightId),
     }));
 
+    const missingFromLeon = dbWithStatus.filter((f) => !f.presentInLeon);
+
     return Response.json({
       leonFlightCount: leonFlights.length,
       dbFlightCount: dbFlights.length,
-      leonFlights: leonFlights.map((f: {
-        flightNid: string;
-        flightNo: string;
-        startTimeUTC: string;
-        startAirport: { code: { iata: string }; city: string };
-        endAirport: { code: { iata: string }; city: string };
-      }) => ({
+      missingFromLeonCount: missingFromLeon.length,
+      // Full raw Leon data — shows all fields including any status/cancelled flags
+      leonFlightsRaw: leonFlights,
+      // Simplified view for the UI
+      leonFlights: leonFlights.map((f) => ({
         flightNid: f.flightNid,
         flightNo: f.flightNo,
         startTimeUTC: f.startTimeUTC,
-        route: `${f.startAirport.code.iata} → ${f.endAirport.code.iata}`,
-        from: f.startAirport.city,
-        to: f.endAirport.city,
+        route: `${(f.startAirport as {code:{iata:string}}).code.iata} → ${(f.endAirport as {code:{iata:string}}).code.iata}`,
+        from: (f.startAirport as {city:string}).city,
+        to: (f.endAirport as {city:string}).city,
       })),
       dbFlights: dbWithStatus,
-      missingFromLeon: dbWithStatus.filter((f) => !f.presentInLeon),
+      missingFromLeon,
+    });
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST: Force-purge all flights that are NOT in Leon's current response
+export async function POST() {
+  if (!(await requireAdmin())) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const apiConfig = await prisma.apiConfig.findFirst();
+    const refreshToken = apiConfig?.leonRefreshToken || process.env.LEON_REFRESH_TOKEN;
+
+    if (!refreshToken) {
+      return Response.json({ error: "No Leon refresh token configured" }, { status: 500 });
+    }
+
+    const authToken = await getAccessToken(refreshToken);
+
+    const now = new Date();
+    const end = new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000);
+    const startDate = now.toISOString().split("T")[0];
+    const endDate = end.toISOString().split("T")[0];
+
+    const query = `
+      query {
+        aircraftAvailability {
+          emptyLegList(
+            startTime: "${startDate}"
+            endTime: "${endDate}"
+          ) {
+            flightNid
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(`${LEON_API_URL}/api/graphql/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authToken },
+      body: JSON.stringify({ query }),
+    });
+
+    const json = await response.json();
+    const leonFlights: { flightNid: string }[] = json.data?.aircraftAvailability?.emptyLegList ?? [];
+    const activeLeonIds = new Set(leonFlights.map((f) => String(f.flightNid)));
+
+    // Find all future flights in DB
+    const dbFlights = await prisma.flight.findMany({
+      where: { depDatetimeUtc: { gte: new Date() } },
+      select: {
+        id: true,
+        leonFlightId: true,
+        flightNo: true,
+        depAirportIata: true,
+        arrAirportIata: true,
+        depCity: true,
+        arrCity: true,
+        isVisible: true,
+        inquiries: { select: { id: true } },
+      },
+    });
+
+    // Find flights in DB that are NOT in Leon's current response
+    const staleFlights = dbFlights.filter((f) => !activeLeonIds.has(f.leonFlightId));
+
+    if (staleFlights.length === 0) {
+      return Response.json({ purged: 0, message: "No stale flights found — all DB flights are present in Leon." });
+    }
+
+    const staleIds = staleFlights.map((f) => f.id);
+
+    // Hide all stale flights
+    await prisma.flight.updateMany({
+      where: { id: { in: staleIds }, isVisible: true },
+      data: { isVisible: false },
+    });
+
+    // Hard-delete stale flights with no inquiries
+    const staleNoInquiries = staleFlights
+      .filter((f) => f.inquiries.length === 0)
+      .map((f) => f.id);
+
+    if (staleNoInquiries.length > 0) {
+      await prisma.flight.deleteMany({
+        where: { id: { in: staleNoInquiries } },
+      });
+    }
+
+    return Response.json({
+      purged: staleFlights.length,
+      deleted: staleNoInquiries.length,
+      hidden: staleIds.length - staleNoInquiries.length,
+      removedFlights: staleFlights.map((f) => ({
+        leonFlightId: f.leonFlightId,
+        route: `${f.depAirportIata} → ${f.arrAirportIata}`,
+        from: f.depCity,
+        to: f.arrCity,
+      })),
     });
   } catch (err) {
     return Response.json(

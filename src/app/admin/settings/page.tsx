@@ -49,6 +49,7 @@ interface DbFlight {
 interface DebugResult {
   leonFlightCount: number;
   dbFlightCount: number;
+  missingFromLeonCount: number;
   leonFlights: LeonFlight[];
   dbFlights: DbFlight[];
   missingFromLeon: DbFlight[];
@@ -76,6 +77,8 @@ export default function SettingsPage() {
   const [debugResult, setDebugResult] = useState<DebugResult | null>(null);
   const [debugError, setDebugError] = useState<string | null>(null);
   const [hidingId, setHidingId] = useState<string | null>(null);
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<{ purged: number; removedFlights: { route: string }[] } | null>(null);
 
   const fetchLogs = async () => {
     try {
@@ -149,12 +152,29 @@ export default function SettingsPage() {
         body: JSON.stringify({ flightId, isVisible: false }),
       });
       if (!res.ok) throw new Error('Failed to hide flight');
-      // Refresh debug result
       await handleDebug();
     } catch (err) {
       setDebugError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setHidingId(null);
+    }
+  };
+
+  const handleForcePurge = async () => {
+    setPurging(true);
+    setPurgeResult(null);
+    setDebugError(null);
+    try {
+      const res = await fetch('/api/admin/leon-debug', { method: 'POST' });
+      if (!res.ok) throw new Error('Purge failed');
+      const data = await res.json();
+      setPurgeResult(data);
+      // Refresh the debug view
+      await handleDebug();
+    } catch (err) {
+      setDebugError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -280,19 +300,45 @@ export default function SettingsPage() {
           noch existieren aber bei Leon fehlen.
         </p>
 
-        <button
-          onClick={handleDebug}
-          disabled={debugLoading}
-          className="btn-gold inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm disabled:opacity-50"
-        >
-          <Search className={`h-4 w-4 ${debugLoading ? 'animate-pulse' : ''}`} />
-          {debugLoading ? 'Prüfe Leon...' : 'Leon jetzt prüfen'}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleDebug}
+            disabled={debugLoading || purging}
+            className="btn-gold inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm disabled:opacity-50"
+          >
+            <Search className={`h-4 w-4 ${debugLoading ? 'animate-pulse' : ''}`} />
+            {debugLoading ? 'Prüfe Leon...' : 'Leon jetzt prüfen'}
+          </button>
+
+          <button
+            onClick={handleForcePurge}
+            disabled={purging || debugLoading}
+            className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-5 py-2.5 text-sm text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+          >
+            <Trash2 className={`h-4 w-4 ${purging ? 'animate-spin' : ''}`} />
+            {purging ? 'Bereinige...' : 'Veraltete Flüge jetzt löschen'}
+          </button>
+        </div>
 
         {debugError && (
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {debugError}
+          </div>
+        )}
+
+        {purgeResult && (
+          <div className={`mt-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm ${
+            purgeResult.purged > 0
+              ? 'border-green-500/30 bg-green-500/10 text-green-400'
+              : 'border-border bg-surface text-muted'
+          }`}>
+            <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              {purgeResult.purged > 0
+                ? <><strong>{purgeResult.purged} veraltete(r) Flug/Flüge</strong> wurden entfernt: {purgeResult.removedFlights.map(f => f.route).join(', ')}</>
+                : 'Kein veralteter Flug gefunden — alles ist aktuell.'}
+            </div>
           </div>
         )}
 
