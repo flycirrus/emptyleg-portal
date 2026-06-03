@@ -125,6 +125,7 @@ async function fetchEmptyLegs(authToken: string): Promise<LeonFlight[]> {
 
 export async function syncFlights(): Promise<{
   synced: number;
+  removed: number;
   error?: string;
 }> {
   const syncLog = await prisma.syncLog.create({
@@ -145,8 +146,12 @@ export async function syncFlights(): Promise<{
     const pricingConfig = await getPricingConfig();
     const surcharges = await getActiveSurcharges();
 
-    // Collect all Leon flight IDs from this sync response
-    const activeLeonIds = new Set(flights.map((f) => String(f.flightNid)));
+    // ── Timestamp-based stale-flight detection ────────────────────────────────
+    // Record the time BEFORE the upsert loop. Every upsert sets syncedAt=now().
+    // After the loop, any future flight with syncedAt < syncStartTime was NOT
+    // touched → it is no longer in Leon → hide and delete it.
+    // This approach is immune to ID format issues or Set comparison bugs.
+    const syncStartTime = new Date();
 
     let synced = 0;
     for (const flight of flights) {
@@ -208,46 +213,42 @@ export async function syncFlights(): Promise<{
       synced++;
     }
 
-    // ── Hide/delete future flights that Leon no longer returns ────────────────
-    // When a flight is cancelled or removed in Leon it will be missing from the
-    // next sync response. Without this step those flights would stay visible in
-    // the portal forever because the date-based cleanup below only removes past
-    // flights.
-    const futureFlightsInDb = await prisma.flight.findMany({
-      where: { depDatetimeUtc: { gte: new Date() } },
-      select: {
-        id: true,
-        leonFlightId: true,
-        inquiries: { select: { id: true } },
+    // ── Remove stale future flights (not seen in this sync) ───────────────────
+    // Any future flight whose syncedAt is older than syncStartTime was not
+    // upserted during this run → Leon no longer returns it → remove from portal.
+    const staleFlights = await prisma.flight.findMany({
+      where: {
+        depDatetimeUtc: { gte: new Date() },
+        syncedAt: { lt: syncStartTime },
       },
+      select: { id: true, inquiries: { select: { id: true } } },
     });
 
-    const removedFromLeon = futureFlightsInDb.filter(
-      (f) => !activeLeonIds.has(f.leonFlightId)
-    );
+    let removed = 0;
+    if (staleFlights.length > 0) {
+      const staleIds = staleFlights.map((f) => f.id);
 
-    if (removedFromLeon.length > 0) {
-      const removedIds = removedFromLeon.map((f) => f.id);
-
-      // Hide immediately (safe even when inquiries exist)
+      // Hide all stale future flights immediately
       await prisma.flight.updateMany({
-        where: { id: { in: removedIds }, isVisible: true },
+        where: { id: { in: staleIds }, isVisible: true },
         data: { isVisible: false },
       });
+      removed = staleFlights.length;
 
-      // Hard-delete only those with no inquiries attached
-      const removedWithNoInquiries = removedFromLeon
+      // Hard-delete stale flights that have no inquiries
+      const staleNoInquiries = staleFlights
         .filter((f) => f.inquiries.length === 0)
         .map((f) => f.id);
 
-      if (removedWithNoInquiries.length > 0) {
+      if (staleNoInquiries.length > 0) {
         await prisma.flight.deleteMany({
-          where: { id: { in: removedWithNoInquiries } },
+          where: { id: { in: staleNoInquiries } },
         });
       }
     }
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // Hide past flights instead of deleting them (deletion fails if inquiries exist)
+    // Hide past flights (deletion fails when inquiries exist)
     await prisma.flight.updateMany({
       where: {
         depDatetimeUtc: { lt: new Date() },
@@ -256,7 +257,7 @@ export async function syncFlights(): Promise<{
       data: { isVisible: false },
     });
 
-    // Only hard-delete past flights that have NO inquiries linked
+    // Hard-delete past flights with no inquiries
     const pastFlightsWithNoInquiries = await prisma.flight.findMany({
       where: {
         depDatetimeUtc: { lt: new Date() },
@@ -275,13 +276,13 @@ export async function syncFlights(): Promise<{
       data: { status: "SUCCESS", flightsSynced: synced, completedAt: new Date() },
     });
 
-    return { synced };
+    return { synced, removed };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     await prisma.syncLog.update({
       where: { id: syncLog.id },
       data: { status: "FAILED", errorMessage: message, completedAt: new Date() },
     });
-    return { synced: 0, error: message };
+    return { synced: 0, removed: 0, error: message };
   }
 }
