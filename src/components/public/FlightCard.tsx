@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Plane, Calendar, Clock, Users, ArrowRight } from "lucide-react";
-import { formatPrice, formatDate } from "@/lib/utils";
+import { formatPrice, formatDate, isCabotageRestricted } from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
 interface FlightCardProps {
@@ -20,11 +20,16 @@ function formatUtcTime(utcDateStr: string): string {
 
 export default function FlightCard({ flight, showPrice }: FlightCardProps) {
   const utcTime = formatUtcTime(flight.depDatetimeUtc);
+  const cabotage = isCabotageRestricted(flight.depCountry, flight.arrCountry);
 
   return (
     <Link
       href={`/flights/${flight.id}`}
-      className="group rounded-xl border border-gray-800 bg-gray-900/60 px-5 py-4 transition-all duration-200 hover:border-[#c9a96e]/40 hover:bg-gray-800/50 hover:shadow-lg hover:shadow-[#c9a96e]/5 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"
+      className={`group rounded-xl border px-5 py-4 transition-all duration-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 ${
+        cabotage
+          ? "border-gray-800/50 bg-gray-900/30 opacity-70"
+          : "border-gray-800 bg-gray-900/60 hover:border-[#c9a96e]/40 hover:bg-gray-800/50 hover:shadow-lg hover:shadow-[#c9a96e]/5"
+      }`}
     >
       {/* ── MOBILE: top row = route left, price right ── */}
       <div className="flex items-start justify-between sm:contents">
@@ -49,7 +54,11 @@ export default function FlightCard({ flight, showPrice }: FlightCardProps) {
 
         {/* Price — right side on mobile, auto-margin on desktop */}
         <div className="text-right sm:ml-auto sm:min-w-[100px]">
-          {showPrice && flight.calculatedPrice != null ? (
+          {cabotage ? (
+            <span className="inline-block rounded-full border border-red-900/50 bg-red-950/30 px-3 py-1 text-xs font-medium text-red-400">
+              Not bookable
+            </span>
+          ) : showPrice && flight.calculatedPrice != null ? (
             <div className="flex flex-col items-end">
               <p className="text-xl font-bold text-[#d4af37]">
                 {formatPrice(flight.calculatedPrice)}
@@ -101,10 +110,16 @@ export default function FlightCard({ flight, showPrice }: FlightCardProps) {
         </div>
 
         {/* CTA */}
-        <span className="flex items-center gap-1.5 rounded-lg bg-[#c9a96e]/10 px-4 py-2 text-sm font-medium text-[#c9a96e] transition-colors group-hover:bg-[#c9a96e]/20 sm:ml-2">
-          Inquire
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </span>
+        {cabotage ? (
+          <span className="flex items-center gap-1.5 rounded-lg bg-gray-800/50 px-4 py-2 text-sm font-medium text-gray-500 sm:ml-2">
+            Cabotage
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 rounded-lg bg-[#c9a96e]/10 px-4 py-2 text-sm font-medium text-[#c9a96e] transition-colors group-hover:bg-[#c9a96e]/20 sm:ml-2">
+            Inquire
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        )}
       </div>
     </Link>
   );

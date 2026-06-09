@@ -41,3 +41,16 @@ export function canAccessAdmin(role: string): boolean {
 export function isApproved(role: string): boolean {
   return role !== "PENDING";
 }
+
+const CABOTAGE_COUNTRY_GROUPS = [
+  ["switzerland", "schweiz", "suisse"],
+  ["united kingdom", "england", "uk", "great britain", "scotland", "wales", "northern ireland"],
+];
+
+export function isCabotageRestricted(depCountry: string, arrCountry: string): boolean {
+  const dep = depCountry.toLowerCase().trim();
+  const arr = arrCountry.toLowerCase().trim();
+  return CABOTAGE_COUNTRY_GROUPS.some(
+    (group) => group.some((c) => dep.includes(c)) && group.some((c) => arr.includes(c))
+  );
+}

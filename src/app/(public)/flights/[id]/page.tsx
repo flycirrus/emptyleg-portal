@@ -15,7 +15,7 @@ import {
   Loader2,
   Ruler,
 } from "lucide-react";
-import { formatPrice, formatDate } from "@/lib/utils";
+import { formatPrice, formatDate, isCabotageRestricted } from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
 function formatUtcTime(utcDateStr: string): string {
@@ -254,8 +254,22 @@ export default function FlightDetailPage({
           />
         </div>
 
+        {/* Cabotage Notice */}
+        {isCabotageRestricted(flight.depCountry, flight.arrCountry) && (
+          <div className="border-t border-red-900/30 bg-red-950/10 px-6 py-5 sm:px-10">
+            <div className="flex items-center gap-3">
+              <span className="inline-block rounded-full border border-red-900/50 bg-red-950/30 px-3 py-1 text-xs font-medium text-red-400">
+                Not bookable
+              </span>
+              <p className="text-sm text-gray-400">
+                This domestic flight is not available for booking due to cabotage regulations.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Price Band */}
-        {canViewPrices && flight.calculatedPrice != null && (
+        {!isCabotageRestricted(flight.depCountry, flight.arrCountry) && canViewPrices && flight.calculatedPrice != null && (
           <div className="border-t border-gray-800 bg-[#111827]/30 px-6 py-5 sm:px-10">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">
@@ -299,6 +313,24 @@ export default function FlightDetailPage({
       </div>
 
       {/* Inquiry Form */}
+      {isCabotageRestricted(flight.depCountry, flight.arrCountry) ? (
+        <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-6 sm:p-8">
+          <h3 className="mb-1 text-xl font-bold text-white">
+            Not Available for Booking
+          </h3>
+          <p className="text-sm text-gray-400">
+            Due to cabotage regulations, domestic flights within this country cannot be offered for charter.
+            Please browse our other available empty legs for international routes.
+          </p>
+          <Link
+            href="/flights"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Browse Other Flights
+          </Link>
+        </div>
+      ) : (
       <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-6 sm:p-8">
         <h3 className="mb-1 text-xl font-bold text-white">
           Inquire About This Flight
@@ -435,6 +467,7 @@ export default function FlightDetailPage({
           </form>
         )}
       </div>
+      )}
     </div>
   );
 }
