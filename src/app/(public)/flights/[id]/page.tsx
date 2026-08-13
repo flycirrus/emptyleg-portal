@@ -325,6 +325,9 @@ export default function FlightDetailPage({
                 </span>
               </div>
             </div>
+            <p className="mt-2 text-[11px] text-gray-500 leading-snug">
+              * Price may be adjusted for incoming luxury tax depending on country.
+            </p>
           </div>
         )}
 
