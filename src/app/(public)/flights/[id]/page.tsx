@@ -10,10 +10,10 @@ import {
   MapPin,
   ArrowLeft,
   ArrowRight,
-  Send,
-  CheckCircle,
   Loader2,
   Ruler,
+  Phone,
+  Mail,
 } from "lucide-react";
 import {
   formatPrice,
@@ -51,15 +51,6 @@ export default function FlightDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
   useEffect(() => {
     async function loadFlight() {
       try {
@@ -89,45 +80,6 @@ export default function FlightDetailPage({
 
     loadFlight();
   }, [id]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(null);
-    setSubmitting(true);
-
-    try {
-      const res = await fetch("/api/inquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          flightId: id,
-          customerName: name,
-          customerEmail: email,
-          customerPhone: phone || undefined,
-          message,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(
-          data?.error
-            ? typeof data.error === "string"
-              ? data.error
-              : "Please check your form inputs and try again."
-            : "Failed to submit inquiry."
-        );
-      }
-
-      setSubmitted(true);
-    } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : "An unexpected error occurred."
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -364,136 +316,25 @@ export default function FlightDetailPage({
           Inquire About This Flight
         </h3>
         <p className="mb-6 text-sm text-gray-400">
-          Send us your details and we will get back to you with availability and
-          pricing.
+          Please contact us or write us an email to the following address.
         </p>
 
-        {submitted ? (
-          <div className="flex flex-col items-center rounded-lg border border-green-900/50 bg-green-950/20 py-12">
-            <CheckCircle className="h-12 w-12 text-green-500" />
-            <h4 className="mt-4 text-lg font-semibold text-white">
-              Inquiry Submitted
-            </h4>
-            <p className="mt-2 max-w-md text-center text-sm text-gray-400">
-              Thank you for your interest. Our team will review your request and
-              contact you shortly.
-            </p>
-            <Link
-              href="/flights"
-              className="mt-6 rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
-            >
-              Browse More Flights
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {/* Name */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="mb-1.5 block text-sm font-medium text-gray-300"
-                >
-                  Full Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="John Smith"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e]"
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="mb-1.5 block text-sm font-medium text-gray-300"
-                >
-                  Email <span className="text-red-400">*</span>
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="john@example.com"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e]"
-                />
-              </div>
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label
-                htmlFor="phone"
-                className="mb-1.5 block text-sm font-medium text-gray-300"
-              >
-                Phone{" "}
-                <span className="text-xs font-normal text-gray-500">
-                  (optional)
-                </span>
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+49 123 456 7890"
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e]"
-              />
-            </div>
-
-            {/* Message */}
-            <div>
-              <label
-                htmlFor="message"
-                className="mb-1.5 block text-sm font-medium text-gray-300"
-              >
-                Message <span className="text-red-400">*</span>
-              </label>
-              <textarea
-                id="message"
-                required
-                rows={4}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Tell us about your travel requirements, number of passengers, special requests..."
-                className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-white placeholder-gray-500 transition-colors focus:border-[#c9a96e] focus:outline-none focus:ring-1 focus:ring-[#c9a96e]"
-              />
-            </div>
-
-            {/* Error */}
-            {formError && (
-              <div className="rounded-lg border border-red-900/50 bg-red-950/20 px-4 py-3 text-sm text-red-400">
-                {formError}
-              </div>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#c9a96e] px-6 py-3 text-sm font-semibold text-black transition-all hover:bg-[#d4af37] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Submit Inquiry
-                </>
-              )}
-            </button>
-          </form>
-        )}
+        <div className="flex flex-col gap-3">
+          <a
+            href="tel:+4961718986402"
+            className="inline-flex items-center gap-3 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-3 text-sm font-medium text-white transition-colors hover:border-[#c9a96e]/40 hover:bg-gray-800"
+          >
+            <Phone className="h-4 w-4 flex-shrink-0 text-[#c9a96e]" />
+            +49 617 189 864 02
+          </a>
+          <a
+            href="mailto:fly@hypejets.com"
+            className="inline-flex items-center gap-3 rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-3 text-sm font-medium text-white transition-colors hover:border-[#c9a96e]/40 hover:bg-gray-800"
+          >
+            <Mail className="h-4 w-4 flex-shrink-0 text-[#c9a96e]" />
+            fly@hypejets.com
+          </a>
+        </div>
       </div>
       )}
     </div>
