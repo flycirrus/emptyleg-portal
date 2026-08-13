@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { Plane, Calendar, Clock, Users, ArrowRight } from "lucide-react";
-import { formatPrice, formatDate, isCabotageRestricted } from "@/lib/utils";
+import {
+  formatPrice,
+  formatDate,
+  isCabotageRestricted,
+  ID_TRAVELLER_PRICE_MIN,
+  ID_TRAVELLER_PRICE_MAX,
+} from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
 interface FlightCardProps {
   flight: FlightPublic;
   showPrice: boolean;
+  idTraveller?: boolean;
 }
 
 function formatUtcTime(utcDateStr: string): string {
@@ -18,7 +25,7 @@ function formatUtcTime(utcDateStr: string): string {
   }).format(new Date(utcDateStr));
 }
 
-export default function FlightCard({ flight, showPrice }: FlightCardProps) {
+export default function FlightCard({ flight, showPrice, idTraveller }: FlightCardProps) {
   const utcTime = formatUtcTime(flight.depDatetimeUtc);
   const cabotage = isCabotageRestricted(flight.depCountry, flight.arrCountry);
 
@@ -68,6 +75,15 @@ export default function FlightCard({ flight, showPrice }: FlightCardProps) {
                   + {formatPrice(flight.estimatedTaxPerPax)} Tax/pax
                 </p>
               ) : null}
+            </div>
+          ) : idTraveller ? (
+            <div className="flex flex-col items-end">
+              <p className="text-xl font-bold text-[#d4af37] whitespace-nowrap">
+                {ID_TRAVELLER_PRICE_MIN}–{ID_TRAVELLER_PRICE_MAX} €
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">
+                per person · on request
+              </p>
             </div>
           ) : (
             <p className="text-sm italic text-gray-500">Price on request</p>

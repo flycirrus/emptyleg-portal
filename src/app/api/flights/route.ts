@@ -89,5 +89,5 @@ export async function GET(request: NextRequest) {
       : {}),
   }));
 
-  return Response.json({ flights: result, canViewPrices: showPrices });
+  return Response.json({ flights: result, canViewPrices: showPrices, role });
 }

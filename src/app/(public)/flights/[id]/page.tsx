@@ -15,7 +15,14 @@ import {
   Loader2,
   Ruler,
 } from "lucide-react";
-import { formatPrice, formatDate, isCabotageRestricted } from "@/lib/utils";
+import {
+  formatPrice,
+  formatDate,
+  isCabotageRestricted,
+  isIdTraveller,
+  ID_TRAVELLER_PRICE_MIN,
+  ID_TRAVELLER_PRICE_MAX,
+} from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
 function formatUtcTime(utcDateStr: string): string {
@@ -29,6 +36,7 @@ function formatUtcTime(utcDateStr: string): string {
 interface FlightDetailResponse {
   flights: FlightPublic[];
   canViewPrices: boolean;
+  role?: string;
 }
 
 export default function FlightDetailPage({
@@ -40,6 +48,7 @@ export default function FlightDetailPage({
 
   const [flight, setFlight] = useState<FlightPublic | null>(null);
   const [canViewPrices, setCanViewPrices] = useState(false);
+  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +78,7 @@ export default function FlightDetailPage({
 
         setFlight(found);
         setCanViewPrices(data.canViewPrices);
+        setRole(data.role || "");
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "An unexpected error occurred."
@@ -300,6 +310,25 @@ export default function FlightDetailPage({
                 </p>
               );
             })()}
+          </div>
+        )}
+
+        {/* Price Band — ID Traveller (fixed per-person range, on request) */}
+        {!isCabotageRestricted(flight.depCountry, flight.arrCountry) && isIdTraveller(role) && (
+          <div className="border-t border-gray-800 bg-[#111827]/30 px-6 py-5 sm:px-10">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">
+                Price per person
+              </span>
+              <div className="flex flex-col items-end">
+                <span className="text-3xl font-bold text-[#d4af37]">
+                  {ID_TRAVELLER_PRICE_MIN}–{ID_TRAVELLER_PRICE_MAX} €
+                </span>
+                <span className="text-sm text-gray-400 mt-1">
+                  variable · on request
+                </span>
+              </div>
+            </div>
           </div>
         )}
 

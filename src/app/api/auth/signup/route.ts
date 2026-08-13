@@ -35,7 +35,8 @@ export async function POST(request: Request) {
       name: parsed.data.name,
       email: parsed.data.email,
       passwordHash,
-      role: "PENDING",
+      // New sign-ups are activated immediately as brokers (no admin approval step).
+      role: "BROKER",
     },
   });
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   return Response.json(
-    { message: "Registration successful. Please wait for admin approval." },
+    { message: "Registration successful. You can now sign in." },
     { status: 201 }
   );
 }

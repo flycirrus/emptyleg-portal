@@ -3,16 +3,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, Calendar, Plane, Users, Loader2, X, Filter } from "lucide-react";
 import FlightCard from "@/components/public/FlightCard";
+import { isIdTraveller } from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
 interface FlightsResponse {
   flights: FlightPublic[];
   canViewPrices: boolean;
+  role?: string;
 }
 
 export default function FlightsPage() {
   const [flights, setFlights] = useState<FlightPublic[]>([]);
   const [canViewPrices, setCanViewPrices] = useState(false);
+  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -59,6 +62,7 @@ export default function FlightsPage() {
       const data: FlightsResponse = await res.json();
       setFlights(data.flights);
       setCanViewPrices(data.canViewPrices);
+      setRole(data.role || "");
 
       // Build distinct aircraft types list from unfiltered results
       if (!aircraftType) {
@@ -298,6 +302,7 @@ export default function FlightsPage() {
               key={flight.id}
               flight={flight}
               showPrice={canViewPrices}
+              idTraveller={isIdTraveller(role)}
             />
           ))}
         </div>

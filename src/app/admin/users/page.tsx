@@ -25,9 +25,19 @@ interface AdminUser {
 
 const ROLE_OPTIONS: UserRole[] = ['PENDING', 'BASIC', 'BROKER', 'MANAGER', 'ADMIN'];
 
+// Display labels. The BASIC role is used as the "ID Traveller" tier
+// (sees flights, but prices only "on request") — see src/lib/utils.ts.
+const ROLE_LABELS: Record<UserRole, string> = {
+  PENDING: 'PENDING',
+  BASIC: 'ID Traveller',
+  BROKER: 'BROKER',
+  MANAGER: 'MANAGER',
+  ADMIN: 'ADMIN',
+};
+
 const ROLE_STYLES: Record<UserRole, string> = {
   PENDING: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  BASIC: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  BASIC: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
   BROKER: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   MANAGER: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   ADMIN: 'bg-gold/20 text-gold border-gold/30',
@@ -273,7 +283,7 @@ export default function UsersPage() {
                           value={r}
                           className="bg-surface text-foreground"
                         >
-                          {r}
+                          {ROLE_LABELS[r]}
                         </option>
                       ))}
                     </select>
@@ -337,10 +347,10 @@ export default function UsersPage() {
             <span className="text-muted">No access until approved</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex rounded-full bg-gray-500/20 px-2 py-0.5 text-gray-400">
-              BASIC
+            <span className="inline-flex rounded-full bg-teal-500/20 px-2 py-0.5 text-teal-400">
+              ID Traveller
             </span>
-            <span className="text-muted">View flights only</span>
+            <span className="text-muted">View flights · price on request</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex rounded-full bg-blue-500/20 px-2 py-0.5 text-blue-400">
