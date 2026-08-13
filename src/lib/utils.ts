@@ -36,12 +36,11 @@ export function canViewPrices(role: string): boolean {
 
 // "ID Traveller" tier. It reuses the existing (previously unused) BASIC role so
 // that NO production database enum migration is required. An ID Traveller sees
-// everything a broker sees EXCEPT real prices — instead a fixed per-person range
-// ("on request") is shown. Because BASIC is not in canViewPrices(), real prices
-// are already withheld automatically.
+// everything a broker sees EXCEPT real prices — instead a fixed per-person price
+// is shown. Because BASIC is not in canViewPrices(), real prices are already
+// withheld automatically.
 export const ID_TRAVELLER_ROLE = "BASIC";
-export const ID_TRAVELLER_PRICE_MIN = 120;
-export const ID_TRAVELLER_PRICE_MAX = 180;
+export const ID_TRAVELLER_PRICE = 50;
 
 export function isIdTraveller(role: string): boolean {
   return role === ID_TRAVELLER_ROLE;

@@ -20,8 +20,7 @@ import {
   formatDate,
   isCabotageRestricted,
   isIdTraveller,
-  ID_TRAVELLER_PRICE_MIN,
-  ID_TRAVELLER_PRICE_MAX,
+  ID_TRAVELLER_PRICE,
 } from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
@@ -322,10 +321,7 @@ export default function FlightDetailPage({
               </span>
               <div className="flex flex-col items-end">
                 <span className="text-3xl font-bold text-[#d4af37]">
-                  {ID_TRAVELLER_PRICE_MIN}–{ID_TRAVELLER_PRICE_MAX} €
-                </span>
-                <span className="text-sm text-gray-400 mt-1">
-                  variable · on request
+                  {ID_TRAVELLER_PRICE} €
                 </span>
               </div>
             </div>

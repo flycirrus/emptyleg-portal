@@ -35,8 +35,8 @@ export async function POST(request: Request) {
       name: parsed.data.name,
       email: parsed.data.email,
       passwordHash,
-      // New sign-ups are activated immediately as brokers (no admin approval step).
-      role: "BROKER",
+      // New sign-ups become "ID Traveller" (BASIC); promote to BROKER manually.
+      role: "BASIC",
     },
   });
 

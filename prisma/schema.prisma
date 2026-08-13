@@ -12,7 +12,7 @@ model User {
   email         String    @unique
   name          String?
   passwordHash  String?
-  role          Role      @default(BROKER)
+  role          Role      @default(BASIC)
   googleId      String?   @unique
   image         String?
   createdAt     DateTime  @default(now())

@@ -6,8 +6,7 @@ import {
   formatPrice,
   formatDate,
   isCabotageRestricted,
-  ID_TRAVELLER_PRICE_MIN,
-  ID_TRAVELLER_PRICE_MAX,
+  ID_TRAVELLER_PRICE,
 } from "@/lib/utils";
 import type { FlightPublic } from "@/types";
 
@@ -79,10 +78,10 @@ export default function FlightCard({ flight, showPrice, idTraveller }: FlightCar
           ) : idTraveller ? (
             <div className="flex flex-col items-end">
               <p className="text-xl font-bold text-[#d4af37] whitespace-nowrap">
-                {ID_TRAVELLER_PRICE_MIN}–{ID_TRAVELLER_PRICE_MAX} €
+                {ID_TRAVELLER_PRICE} €
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5 whitespace-nowrap">
-                per person · on request
+                per person
               </p>
             </div>
           ) : (
