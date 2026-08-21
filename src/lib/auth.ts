@@ -56,8 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               name: user.name,
               image: user.image,
               googleId: account.providerAccountId,
-              // New sign-ups become "ID Traveller" (BASIC); promote to BROKER manually.
-              role: "BASIC",
+              role: "BROKER",
             },
           });
         } else if (!existingUser.googleId) {
