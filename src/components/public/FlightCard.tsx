@@ -14,6 +14,9 @@ interface FlightCardProps {
   flight: FlightPublic;
   showPrice: boolean;
   idTraveller?: boolean;
+  // Base path for the card link. Defaults to the login-gated broker detail page.
+  // The public ID Traveller landing passes "/idtravel" to reach the public detail.
+  hrefBase?: string;
 }
 
 function formatUtcTime(utcDateStr: string): string {
@@ -24,13 +27,13 @@ function formatUtcTime(utcDateStr: string): string {
   }).format(new Date(utcDateStr));
 }
 
-export default function FlightCard({ flight, showPrice, idTraveller }: FlightCardProps) {
+export default function FlightCard({ flight, showPrice, idTraveller, hrefBase = "/flights" }: FlightCardProps) {
   const utcTime = formatUtcTime(flight.depDatetimeUtc);
   const cabotage = isCabotageRestricted(flight.depCountry, flight.arrCountry);
 
   return (
     <Link
-      href={`/flights/${flight.id}`}
+      href={`${hrefBase}/${flight.id}`}
       className={`group rounded-xl border px-5 py-4 transition-all duration-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 ${
         cabotage
           ? "border-gray-800/50 bg-gray-900/30 opacity-70"
