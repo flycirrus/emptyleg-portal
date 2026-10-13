@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { auth } from "@/lib/auth";
 import Providers from "@/components/providers";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,6 +28,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers session={session}>{children}</Providers>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
