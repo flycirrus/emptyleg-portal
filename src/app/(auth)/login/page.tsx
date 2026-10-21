@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Plane } from "lucide-react";
-import { auth, signIn } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import LoginForm from "./LoginForm";
 
 export default async function LoginPage() {
@@ -29,9 +28,16 @@ export default async function LoginPage() {
         <LoginForm />
       </div>
 
+      {/* Self-registration is closed. Accounts are created by an admin only. */}
       <p className="text-center text-sm text-muted">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-gold hover:text-gold-light">Sign Up</Link>
+        Access is by invitation only. Contact us at{" "}
+        <a
+          href="mailto:fly@hypejets.com"
+          className="text-gold hover:text-gold-light"
+        >
+          fly@hypejets.com
+        </a>
+        .
       </p>
     </div>
   );

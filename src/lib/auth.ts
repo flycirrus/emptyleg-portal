@@ -49,17 +49,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { email: user.email! },
         });
 
+        // Self-registration is closed: a Google login only works for an
+        // account an admin already created. Unknown emails are rejected
+        // instead of being auto-provisioned as brokers.
         if (!existingUser) {
-          await prisma.user.create({
-            data: {
-              email: user.email!,
-              name: user.name,
-              image: user.image,
-              googleId: account.providerAccountId,
-              role: "BROKER",
-            },
-          });
-        } else if (!existingUser.googleId) {
+          return false;
+        }
+
+        if (!existingUser.googleId) {
           await prisma.user.update({
             where: { email: user.email! },
             data: { googleId: account.providerAccountId, image: user.image },
