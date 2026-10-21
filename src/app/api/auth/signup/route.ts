@@ -35,8 +35,11 @@ export async function POST(request: Request) {
       name: parsed.data.name,
       email: parsed.data.email,
       passwordHash,
-      // New sign-ups are activated immediately as brokers (no admin approval step).
-      role: "BROKER",
+      // New sign-ups wait for admin approval (role PENDING). A PENDING user
+      // cannot reach /admin or /flights until an admin raises their role.
+      // This matches what the signup screen already tells the user and blocks
+      // self-service account creation by bots/scanners.
+      role: "PENDING",
     },
   });
 
@@ -47,7 +50,10 @@ export async function POST(request: Request) {
   }
 
   return Response.json(
-    { message: "Registration successful. You can now sign in." },
+    {
+      message:
+        "Registration received. Your account is awaiting admin approval.",
+    },
     { status: 201 }
   );
 }
