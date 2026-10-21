@@ -11,24 +11,50 @@ async function requireAdmin() {
   return session;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await requireAdmin())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      image: true,
-      createdAt: true,
-    },
-  });
+  // Paginated + server-side search so the page never has to load the entire
+  // user table at once (a flood of bot sign-ups used to freeze the UI).
+  const params = new URL(request.url).searchParams;
+  const page = Math.max(1, parseInt(params.get("page") || "1", 10) || 1);
+  const pageSize = Math.min(
+    200,
+    Math.max(1, parseInt(params.get("pageSize") || "50", 10) || 50)
+  );
+  const search = (params.get("search") || "").trim();
 
-  return Response.json({ users });
+  const where = search
+    ? {
+        OR: [
+          { email: { contains: search, mode: "insensitive" as const } },
+          { name: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const [users, total, pendingUsers] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        image: true,
+        createdAt: true,
+      },
+    }),
+    prisma.user.count({ where }),
+    prisma.user.count({ where: { role: "PENDING" } }),
+  ]);
+
+  return Response.json({ users, total, pendingUsers, page, pageSize });
 }
 
 const updateSchema = z.object({

@@ -95,10 +95,12 @@ export default function AdminDashboard() {
         newInquiries: allInquiries.filter(
           (i: { status: string }) => i.status === 'NEW'
         ).length,
-        totalUsers: users.length,
-        pendingUsers: users.filter(
-          (u: { role: string }) => u.role === 'PENDING'
-        ).length,
+        // The users endpoint is paginated now, so use its total/pending counts
+        // instead of the length of the (partial) list it returns.
+        totalUsers: usersData.total ?? users.length,
+        pendingUsers:
+          usersData.pendingUsers ??
+          users.filter((u: { role: string }) => u.role === 'PENDING').length,
       });
 
       setInquiries(allInquiries.slice(0, 5));
