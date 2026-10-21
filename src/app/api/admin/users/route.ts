@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import { sendApprovalNotification } from "@/lib/email";
 import { z } from "zod";
 
@@ -26,6 +27,27 @@ export async function GET(request: Request) {
   );
   const search = (params.get("search") || "").trim();
 
+  // Sorting: by registration date, login count, or last login.
+  const sortField = (() => {
+    switch (params.get("sort")) {
+      case "loginCount":
+        return "loginCount" as const;
+      case "lastLoginAt":
+        return "lastLoginAt" as const;
+      default:
+        return "createdAt" as const;
+    }
+  })();
+  const sortDir = params.get("order") === "asc" ? "asc" : "desc";
+  let orderBy: Prisma.UserOrderByWithRelationInput;
+  if (sortField === "lastLoginAt") {
+    orderBy = { lastLoginAt: { sort: sortDir, nulls: "last" } };
+  } else if (sortField === "loginCount") {
+    orderBy = { loginCount: sortDir };
+  } else {
+    orderBy = { createdAt: sortDir };
+  }
+
   const where = search
     ? {
         OR: [
@@ -38,7 +60,7 @@ export async function GET(request: Request) {
   const [users, total, pendingUsers] = await Promise.all([
     prisma.user.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: {
@@ -47,6 +69,8 @@ export async function GET(request: Request) {
         name: true,
         role: true,
         image: true,
+        loginCount: true,
+        lastLoginAt: true,
         createdAt: true,
       },
     }),

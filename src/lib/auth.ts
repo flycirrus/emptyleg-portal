@@ -85,6 +85,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
+  events: {
+    // Track login activity: bump a counter and timestamp on every successful
+    // sign-in (credentials or Google). Failures here must never block login.
+    async signIn({ user }) {
+      if (!user?.email) return;
+      try {
+        await prisma.user.update({
+          where: { email: user.email },
+          data: {
+            loginCount: { increment: 1 },
+            lastLoginAt: new Date(),
+          },
+        });
+      } catch {
+        // non-fatal
+      }
+    },
+  },
   pages: {
     signIn: "/login",
   },

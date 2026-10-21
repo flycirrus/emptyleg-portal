@@ -11,10 +11,13 @@ import {
   UserCheck,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatTime } from '@/lib/utils';
 
 type UserRole = 'PENDING' | 'BASIC' | 'BROKER' | 'MANAGER' | 'ADMIN';
+type SortField = 'createdAt' | 'loginCount' | 'lastLoginAt';
 
 interface AdminUser {
   id: string;
@@ -22,6 +25,8 @@ interface AdminUser {
   name: string | null;
   role: UserRole;
   image: string | null;
+  loginCount: number;
+  lastLoginAt: string | null;
   createdAt: string;
 }
 
@@ -60,6 +65,8 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -85,6 +92,8 @@ export default function UsersPage() {
       const qs = new URLSearchParams({
         page: String(page),
         pageSize: String(PAGE_SIZE),
+        sort: sortField,
+        order: sortDir,
       });
       if (appliedSearch) qs.set('search', appliedSearch);
       const res = await fetch(`/api/admin/users?${qs.toString()}`);
@@ -98,7 +107,26 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, appliedSearch]);
+  }, [page, appliedSearch, sortField, sortDir]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('desc');
+    }
+    setPage(1);
+  };
+
+  const sortArrow = (field: SortField) =>
+    sortField === field ? (
+      sortDir === 'asc' ? (
+        <ArrowUp className="inline h-3 w-3" />
+      ) : (
+        <ArrowDown className="inline h-3 w-3" />
+      )
+    ) : null;
 
   // Debounce the search box -> applied search (and reset to page 1).
   useEffect(() => {
@@ -348,7 +376,28 @@ export default function UsersPage() {
                 Role
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted">
-                Registered
+                <button
+                  onClick={() => toggleSort('createdAt')}
+                  className="inline-flex items-center gap-1 uppercase hover:text-white"
+                >
+                  Registered {sortArrow('createdAt')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted">
+                <button
+                  onClick={() => toggleSort('loginCount')}
+                  className="inline-flex items-center gap-1 uppercase hover:text-white"
+                >
+                  Logins {sortArrow('loginCount')}
+                </button>
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted">
+                <button
+                  onClick={() => toggleSort('lastLoginAt')}
+                  className="inline-flex items-center gap-1 uppercase hover:text-white"
+                >
+                  Last login {sortArrow('lastLoginAt')}
+                </button>
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted">
                 Actions
@@ -358,13 +407,13 @@ export default function UsersPage() {
           <tbody className="divide-y divide-border">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center">
+                <td colSpan={7} className="px-4 py-12 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-gold" />
                 </td>
               </tr>
             ) : error ? (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center">
+                <td colSpan={7} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <AlertCircle className="h-8 w-8 text-red-400" />
                     <p className="text-sm text-red-400">{error}</p>
@@ -380,7 +429,7 @@ export default function UsersPage() {
             ) : users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-sm text-muted"
                 >
                   No users found
@@ -440,6 +489,21 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-muted">
                     {formatDate(user.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-white">
+                    {user.loginCount}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted">
+                    {user.lastLoginAt ? (
+                      <>
+                        {formatDate(user.lastLoginAt)}{' '}
+                        <span className="text-xs">
+                          {formatTime(user.lastLoginAt)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-muted">–</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {confirmDeleteId === user.id ? (
