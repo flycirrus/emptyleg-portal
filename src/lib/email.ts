@@ -1,6 +1,20 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy singleton: the Resend constructor throws when RESEND_API_KEY is missing.
+// Instantiating at module scope made that throw happen at build time ("collect
+// page data"), which broke the Vercel build. Only build the client when we
+// actually send an email (runtime).
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+    _resend = new Resend(apiKey);
+  }
+  return _resend;
+}
 
 const baseUrl = process.env.NEXTAUTH_URL || "https://emptylegportal.com";
 const FROM_EMAIL = "HYPE Empty Legs <noreply@hypejets.com>";
@@ -14,7 +28,7 @@ export async function sendInquiryNotification(inquiry: {
   flightRoute: string;
   flightDate: string;
 }) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: NOTIFICATION_EMAIL,
     subject: `✈️ Neue Anfrage: ${inquiry.flightRoute}`,
@@ -119,7 +133,7 @@ export async function sendInquiryNotification(inquiry: {
 }
 
 export async function sendApprovalNotification(userEmail: string, userName: string) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: userEmail,
     subject: "✅ Dein Account wurde aktiviert",
@@ -160,7 +174,7 @@ export async function sendApprovalNotification(userEmail: string, userName: stri
 }
 
 export async function sendNewUserNotification(userName: string, userEmail: string) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: NOTIFICATION_EMAIL,
     subject: `👤 Neuer User: ${userName}`,
