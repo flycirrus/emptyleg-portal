@@ -129,7 +129,7 @@ export default function IdTravellerFlightDetailPage({
                 {flight.depCity}
               </h2>
               <p className="mt-1 text-gray-400">
-                {flight.depAirportIata} &middot; {flight.depCountry}
+                {flight.depAirportIata || flight.depAirportIcao} &middot; {flight.depCountry}
               </p>
             </div>
 
@@ -161,7 +161,7 @@ export default function IdTravellerFlightDetailPage({
                 {flight.arrCity}
               </h2>
               <p className="mt-1 text-gray-400">
-                {flight.arrAirportIata} &middot; {flight.arrCountry}
+                {flight.arrAirportIata || flight.arrAirportIcao} &middot; {flight.arrCountry}
               </p>
             </div>
           </div>

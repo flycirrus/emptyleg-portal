@@ -47,13 +47,13 @@ export default function FlightCard({ flight, showPrice, idTraveller, hrefBase = 
         <div className="flex flex-col justify-center sm:min-w-[240px]">
           {/* IATA Codes and Plane */}
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-[#c9a96e]">{flight.depAirportIata}</span>
+            <span className="text-lg font-bold text-[#c9a96e]">{flight.depAirportIata || flight.depAirportIcao}</span>
             <div className="flex items-center gap-1.5 text-gray-500">
               <div className="h-px w-6 bg-gray-700" />
               <Plane className="h-4 w-4 text-[#c9a96e]" />
               <div className="h-px w-6 bg-gray-700" />
             </div>
-            <span className="text-lg font-bold text-[#c9a96e]">{flight.arrAirportIata}</span>
+            <span className="text-lg font-bold text-[#c9a96e]">{flight.arrAirportIata || flight.arrAirportIcao}</span>
           </div>
           {/* City Names */}
           <p className="mt-0.5 text-base font-semibold text-white">

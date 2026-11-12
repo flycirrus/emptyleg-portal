@@ -36,11 +36,11 @@ model Flight {
   flightNo        String
   depDatetimeUtc  DateTime
   aircraftType    String
-  depAirportIata  String
+  depAirportIata  String?
   depAirportIcao  String
   depCity         String
   depCountry      String
-  arrAirportIata  String
+  arrAirportIata  String?
   arrAirportIcao  String
   arrCity         String
   arrCountry      String

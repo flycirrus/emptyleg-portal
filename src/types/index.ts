@@ -7,10 +7,12 @@ export interface FlightPublic {
   flightNo: string;
   depDatetimeUtc: string;
   aircraftType: string;
-  depAirportIata: string;
+  depAirportIata: string | null;
+  depAirportIcao: string;
   depCity: string;
   depCountry: string;
-  arrAirportIata: string;
+  arrAirportIata: string | null;
+  arrAirportIcao: string;
   arrCity: string;
   arrCountry: string;
   distanceNm: number;

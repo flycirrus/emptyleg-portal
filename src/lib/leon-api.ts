@@ -154,7 +154,9 @@ export async function syncFlights(): Promise<{
     const syncStartTime = new Date();
 
     let synced = 0;
+    const flightErrors: string[] = [];
     for (const flight of flights) {
+      try {
       const start = new Date(flight.startTimeUTC).getTime();
       const end = new Date(flight.endTimeUTC).getTime();
       const durationMin = Math.round((end - start) / 60000);
@@ -174,11 +176,11 @@ export async function syncFlights(): Promise<{
           flightNo: flight.flightNo,
           depDatetimeUtc: new Date(flight.startTimeUTC),
           aircraftType: flight.acft.acftType.iCAO,
-          depAirportIata: flight.startAirport.code.iata,
+          depAirportIata: flight.startAirport.code.iata || null,
           depAirportIcao: flight.startAirport.code.icao,
           depCity: flight.startAirport.city,
           depCountry: flight.startAirport.country,
-          arrAirportIata: flight.endAirport.code.iata,
+          arrAirportIata: flight.endAirport.code.iata || null,
           arrAirportIcao: flight.endAirport.code.icao,
           arrCity: flight.endAirport.city,
           arrCountry: flight.endAirport.country,
@@ -194,11 +196,11 @@ export async function syncFlights(): Promise<{
           flightNo: flight.flightNo,
           depDatetimeUtc: new Date(flight.startTimeUTC),
           aircraftType: flight.acft.acftType.iCAO,
-          depAirportIata: flight.startAirport.code.iata,
+          depAirportIata: flight.startAirport.code.iata || null,
           depAirportIcao: flight.startAirport.code.icao,
           depCity: flight.startAirport.city,
           depCountry: flight.startAirport.country,
-          arrAirportIata: flight.endAirport.code.iata,
+          arrAirportIata: flight.endAirport.code.iata || null,
           arrAirportIcao: flight.endAirport.code.icao,
           arrCity: flight.endAirport.city,
           arrCountry: flight.endAirport.country,
@@ -211,6 +213,12 @@ export async function syncFlights(): Promise<{
         },
       });
       synced++;
+      } catch (err) {
+        // One malformed flight must not abort the whole sync.
+        const msg = err instanceof Error ? err.message : String(err);
+        flightErrors.push(`Flight ${flight.flightNid} (${flight.flightNo}): ${msg}`);
+        console.error(`[sync] Skipping flight ${flight.flightNid}:`, msg);
+      }
     }
 
     // ── Remove stale future flights (not seen in this sync) ───────────────────
@@ -273,7 +281,15 @@ export async function syncFlights(): Promise<{
 
     await prisma.syncLog.update({
       where: { id: syncLog.id },
-      data: { status: "SUCCESS", flightsSynced: synced, completedAt: new Date() },
+      data: {
+        status: "SUCCESS",
+        flightsSynced: synced,
+        completedAt: new Date(),
+        errorMessage:
+          flightErrors.length > 0
+            ? `${flightErrors.length} Flug/Flüge übersprungen: ${flightErrors.join(" | ")}`
+            : null,
+      },
     });
 
     return { synced, removed };
